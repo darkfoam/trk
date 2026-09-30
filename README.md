@@ -17,4 +17,4 @@ very quickly, and that's where `trk` comes in!
 track what it is you're working on and ultimate get back to the top
 of the tree, indicating you've actually completed a thing!  
 
-That is, the hope, of course. 
+At least, that is what I hope. 
