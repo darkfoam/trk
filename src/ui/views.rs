@@ -45,7 +45,7 @@ pub fn status_view(doc: &Doc, width: usize, style: Style) -> Vec<StyledLine> {
         return vec![plain("no goal yet. try: trk goal new <title>")];
     };
 
-    let mut out = vec![styled(goal.title.clone(), Role::Bold)];
+    let mut out = vec![styled(goal.title.clone(), Role::Title)];
     let Some(cursor) = goal.cursor else {
         out.push(plain("no current task"));
         if goal.has_open_tasks() {
@@ -74,14 +74,14 @@ pub fn status_view(doc: &Doc, width: usize, style: Style) -> Vec<StyledLine> {
         let depth = shown_start + offset + 1;
         let text = goal.find(*id).map(|t| t.text.clone()).unwrap_or_default();
         let first = indent(depth);
-        wrap_into(&mut out, &text, width, &first, &first, Role::Normal);
+        wrap_into(&mut out, &text, width, &first, &first, Role::Task);
     }
 
     let cur_task = goal.find(cursor);
     let cur_text = cur_task.map(|t| t.text.clone()).unwrap_or_default();
     let first = format!("{}{} ", indent(current_depth), style.cursor());
     let cont = " ".repeat(wrap::width_of(&first));
-    wrap_into(&mut out, &cur_text, width, &first, &cont, Role::Normal);
+    wrap_into(&mut out, &cur_text, width, &first, &cont, Role::Current);
 
     let note_indent = indent(current_depth + 1);
     if let Some(task) = cur_task {
@@ -105,7 +105,7 @@ pub fn status_view(doc: &Doc, width: usize, style: Style) -> Vec<StyledLine> {
         for (depth, text) in descendants.iter().take(LIMIT) {
             let first = format!("{}- ", indent(*depth));
             let cont = format!("{}  ", indent(*depth));
-            wrap_into(&mut out, text, width, &first, &cont, Role::Normal);
+            wrap_into(&mut out, text, width, &first, &cont, Role::Task);
         }
         if descendants.len() > LIMIT {
             out.push(plain(format!(
@@ -144,7 +144,7 @@ pub fn why_for(goal: &Goal, target: TaskId, width: usize, style: Style) -> Vec<S
     let Some(path) = tree::find_path(goal, target) else {
         return vec![plain("task not found")];
     };
-    let mut out = vec![styled(goal.title.clone(), Role::Bold)];
+    let mut out = vec![styled(goal.title.clone(), Role::Title)];
     for i in 0..path.len() {
         let Some(task) = tree::task_at(goal, &path[..=i]) else {
             continue;
@@ -157,7 +157,12 @@ pub fn why_for(goal: &Goal, target: TaskId, width: usize, style: Style) -> Vec<S
         };
         let first = format!("{}{}", indent(depth), marker);
         let cont = " ".repeat(wrap::width_of(&first));
-        wrap_into(&mut out, &task.text, width, &first, &cont, Role::Normal);
+        let role = if i == path.len() - 1 {
+            Role::Current
+        } else {
+            Role::Task
+        };
+        wrap_into(&mut out, &task.text, width, &first, &cont, role);
         let note_indent = indent(depth + 1);
         if task.note.is_empty() {
             out.push(styled(format!("{note_indent}why: (none)"), Role::Dim));
@@ -186,7 +191,7 @@ pub fn list_view(
             if i > 0 {
                 out.push(StyledLine::default());
             }
-            out.push(styled(goal.title.clone(), Role::Bold));
+            out.push(styled(goal.title.clone(), Role::Title));
             out.extend(goal_list_lines(goal, width, style, all));
         }
         if out.is_empty() {
@@ -198,7 +203,7 @@ pub fn list_view(
     let Some(goal) = doc.active_goal() else {
         return vec![plain("no goal yet. try: trk goal new <title>")];
     };
-    let mut out = vec![styled(goal.title.clone(), Role::Bold)];
+    let mut out = vec![styled(goal.title.clone(), Role::Title)];
     out.extend(goal_list_lines(goal, width, style, all));
     out
 }
@@ -246,7 +251,12 @@ fn goal_list_lines(goal: &Goal, width: usize, style: Style, all: bool) -> Vec<St
                 } else {
                     String::new()
                 };
-                (format!("{n:>num_width$}"), Role::Normal, suffix)
+                let role = if is_current {
+                    Role::Current
+                } else {
+                    Role::Task
+                };
+                (format!("{n:>num_width$}"), role, suffix)
             }
             TaskState::Done(_) => ("x".to_string(), Role::Dim, String::new()),
             TaskState::Dropped(_) => ("-".to_string(), Role::Dim, String::new()),
@@ -302,7 +312,7 @@ pub fn log_view(
                 done.len(),
                 added
             ),
-            Role::Bold,
+            Role::Title,
         ));
         if done.is_empty() {
             out.push(styled("  nothing finished", Role::Dim));
@@ -383,7 +393,7 @@ pub fn agenda_view(doc: &Doc, today: NaiveDate, width: usize, style: Style) -> V
 
     let mut out = Vec::new();
     if !overdue.is_empty() {
-        out.push(styled("Overdue", Role::Bold));
+        out.push(styled("Overdue", Role::Title));
         let mut sorted: Vec<&&Entry> = overdue.iter().collect();
         sorted.sort_by_key(|e| (e.date, e.time));
         for e in sorted {
@@ -404,7 +414,7 @@ pub fn agenda_view(doc: &Doc, today: NaiveDate, width: usize, style: Style) -> V
             continue;
         }
         let label = format!("{} {}", date.format("%a"), date.format("%Y-%m-%d"));
-        out.push(styled(label, Role::Bold));
+        out.push(styled(label, Role::Title));
         let mut day_entries: Vec<&Entry> = entries.iter().filter(|e| e.date == date).collect();
         day_entries.sort_by_key(|e| (e.time.is_none(), e.time));
         if day_entries.is_empty() {

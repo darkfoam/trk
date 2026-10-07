@@ -77,7 +77,7 @@ impl Ui for TerminalUi {
             format!("warning: {message}"),
             crate::ui::style::Role::Warning,
         );
-        eprintln!("{}", crate::ui::style::render_line(&line, self.style.color));
+        eprintln!("{}", crate::ui::style::render_line(&line, self.style));
     }
 
     fn error(&mut self, message: &str) {

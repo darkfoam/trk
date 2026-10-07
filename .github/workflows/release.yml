@@ -1,15 +1,25 @@
 name: release
 
-# Cut a release by pushing a version tag, e.g.:
-#   git tag v0.1.0 && git push origin v0.1.0
+# Publish a release when a version tag is pushed, e.g.:
+#   git tag v0.1.2 && git push origin v0.1.2
+#
+# Or re-publish an existing tag manually (Actions -> release -> Run workflow),
+# which is handy for fixing a release's notes without moving the tag.
 on:
   push:
     tags: ["v*"]
-  # Allow a manual run (creates/updates a release for the current ref).
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)publish, e.g. v0.1.1"
+        required: true
+        type: string
 
 permissions:
   contents: write
+
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   build:
@@ -35,6 +45,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -65,9 +77,55 @@ jobs:
             -Path "target/${{ matrix.target }}/release/trk.exe" `
             -DestinationPath "${{ matrix.archive }}"
 
-      - name: Upload to release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}
+          if-no-files-found: error
+
+  release:
+    # Create the release exactly once, after every asset has been built, so the
+    # body is written once (this is what previously produced several copies of
+    # "Full Changelog").
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Build release body from CHANGELOG.md
+        run: |
+          python3 - "${{ env.RELEASE_TAG }}" <<'PY'
+          import re
+          import sys
+
+          tag = sys.argv[1]
+          version = tag[1:] if tag.startswith("v") else tag
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          heading = re.search(r'^## \[%s\][^\n]*\n' % re.escape(version), text, re.M)
+          if not heading:
+              open("release-body.md", "w", encoding="utf-8").write(
+                  "See CHANGELOG.md.\n"
+              )
+              sys.exit(0)
+          rest = text[heading.end():]
+          nxt = re.search(r'^## \[', rest, re.M)
+          body = rest[: nxt.start()] if nxt else rest
+          open("release-body.md", "w", encoding="utf-8").write(body.strip() + "\n")
+          PY
+          echo "----- release body -----"
+          cat release-body.md
+
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.archive }}
-          generate_release_notes: true
+          tag_name: ${{ env.RELEASE_TAG }}
+          body_path: release-body.md
+          files: dist/*
           fail_on_unmatched_files: true

@@ -174,6 +174,7 @@ fn run_config_flow() -> Result<Config, TrkError> {
         undo_depth: 50,
         prompt_why: true,
         ascii: Toggle::Auto,
+        current_color: crate::ui::style::ColorName::default(),
         poll_ms: 500,
     };
 
@@ -233,6 +234,7 @@ fn config_command(color_flag: Option<Toggle>, args: ConfigArgs) -> Result<i32, T
             println!("backups: {}", cfg.backups.display());
             println!("color:   {}", cfg.color.as_str());
             println!("ascii:   {}", cfg.ascii.as_str());
+            println!("current_color: {}", cfg.current_color.as_str());
             println!("wrap:    {}", cfg.wrap);
             println!("undo_depth: {}", cfg.undo_depth);
             println!("prompt_why: {}", cfg.prompt_why);
@@ -268,7 +270,7 @@ fn undo_ring(ctx: &Ctx) -> UndoRing {
 }
 
 fn print_lines(ctx: &Ctx, lines: &[style::StyledLine]) {
-    let rendered = style::render_lines(lines, ctx.color);
+    let rendered = style::render_lines(lines, ctx.style());
     print!("{rendered}");
 }
 
@@ -284,9 +286,9 @@ fn emit_messages(ctx: &Ctx, messages: &[Message]) {
                 spans: vec![style::Span { text: line, role }],
             };
             if message.kind == MsgKind::Warning {
-                eprintln!("{}", style::render_line(&styled, ctx.color));
+                eprintln!("{}", style::render_line(&styled, ctx.style()));
             } else {
-                println!("{}", style::render_line(&styled, ctx.color));
+                println!("{}", style::render_line(&styled, ctx.style()));
             }
         }
     }

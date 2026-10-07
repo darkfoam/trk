@@ -1,9 +1,11 @@
 name: ci
 
+# Tests run only when a change lands on main (i.e. a merge). Builds run only
+# after the tests pass. Pull requests and feature-branch pushes do not trigger
+# this workflow.
 on:
   push:
-    branches: [master, main]
-  pull_request:
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
@@ -30,3 +32,20 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
       - name: test
         run: cargo test
+
+  build:
+    # Only build once every test matrix job has succeeded.
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: build
+        run: cargo build --release --locked
+      - name: upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: trk-x86_64-unknown-linux-gnu
+          path: target/release/trk
+          if-no-files-found: error

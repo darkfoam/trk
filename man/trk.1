@@ -1680,6 +1680,21 @@ when creating a task. Default true.
 Default
 .BR auto .
 .TP
+.B current_color
+The color of the current task: one of
+.BR black ,
+.BR red ,
+.BR green ,
+.BR yellow ,
+.BR blue ,
+.BR magenta ,
+.BR cyan ,
+.BR white ,
+or a
+.B bright\-
+prefixed variant. Default
+.BR green .
+.TP
 .B poll_ms
 Change\-detection interval for
 .BR "trk start" ,
@@ -1746,8 +1761,11 @@ ellipsis           …     ...
 .fi
 .RE
 .PP
-The cursor row is bold; done and dropped rows are dim; notes are dim; warnings
-are orange; errors are red.
+The goal title is bold white. The current task is bold in
+.B current_color
+(default green). Every other task is faded green, so the current task stands
+out; done and dropped rows are dim; notes are dim; warnings are orange; errors
+are red.
 .SH EXIT STATUS
 .TP
 .B 0

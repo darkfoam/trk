@@ -392,6 +392,7 @@ wrap = 80             # maximum output width in columns
 undo_depth = 50       # number of undo snapshots kept
 prompt_why = true     # ask "why?" when creating a task
 ascii = "auto"        # auto | always | never
+current_color = "green"  # color of the current task
 poll_ms = 500         # `trk start` change-detection interval
 ```
 
@@ -405,6 +406,15 @@ Environment variables:
 
 Exit codes: `0` success, `1` general error, `2` usage error, `3` blocked,
 `4` nothing to act on, `5` cancelled.
+
+## Colors
+
+The goal title is bold white. The current task is bold in `current_color`
+(default `green`). Every other task is faded green, so the current task pops.
+Done and dropped rows and notes are dim, warnings are orange, and errors are
+red. Color is enabled automatically on a terminal; force it with
+`--color always` or `color = "always"`, and disable it with `--color never`,
+`color = "never"`, or by setting `NO_COLOR`.
 
 ## Development
 

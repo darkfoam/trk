@@ -436,7 +436,9 @@ impl<'a> App<'a> {
         let title_line = Line::from(vec![
             Span::styled(
                 format!(" {title} "),
-                TuiStyle::default().add_modifier(Modifier::BOLD),
+                TuiStyle::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
             ),
             Span::raw(format!("  {open} open")),
         ]);
@@ -484,11 +486,19 @@ impl<'a> App<'a> {
                 } else {
                     ""
                 };
-                let style = if self.highlight == task.id {
-                    TuiStyle::default().add_modifier(Modifier::REVERSED)
+                let is_current = goal.cursor == Some(task.id);
+                let mut style = if is_current {
+                    TuiStyle::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD)
                 } else {
                     TuiStyle::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::DIM)
                 };
+                if self.highlight == task.id {
+                    style = style.add_modifier(Modifier::REVERSED);
+                }
                 lines.push(Line::styled(
                     format!("{marker}{}{}{cursor}", "  ".repeat(depth), task.text),
                     style,
@@ -496,7 +506,9 @@ impl<'a> App<'a> {
             } else if task.has_open_descendant() {
                 lines.push(Line::styled(
                     format!("  {}{}", "  ".repeat(depth), task.text),
-                    TuiStyle::default().fg(Color::DarkGray),
+                    TuiStyle::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::DIM),
                 ));
             }
         }

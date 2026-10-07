@@ -42,3 +42,11 @@
   positional args, no quoting.
 - `man/trk.1` is hand-written; `cargo run -p xtask -- man` writes a generated
   flag skeleton to `man/trk.1.generated` for drift-checking.
+
+## Changelog
+- Every code change must add an entry to `CHANGELOG.md` under `## [Unreleased]`,
+  following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) sections
+  (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`).
+- On release, move the `Unreleased` entries under a new `## [x.y.z] - YYYY-MM-DD`
+  heading and add the compare link. Releases publish that section as the
+  release body.

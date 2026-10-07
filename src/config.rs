@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::ui::style::ColorName;
+
 /// Tri-state preference used for `color` and `ascii`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Toggle {
@@ -45,6 +47,7 @@ pub struct Config {
     pub undo_depth: usize,
     pub prompt_why: bool,
     pub ascii: Toggle,
+    pub current_color: ColorName,
     pub poll_ms: u64,
 }
 
@@ -194,6 +197,25 @@ impl Config {
             None => Toggle::Auto,
         };
 
+        let current_color = match table.get("current_color") {
+            Some(toml::Value::String(s)) => {
+                ColorName::parse(s).ok_or_else(|| ConfigError::Invalid {
+                    path: path.to_path_buf(),
+                    message: format!(
+                        "current_color: expected one of {}, got \"{s}\"",
+                        ColorName::NAMES.join(", ")
+                    ),
+                })?
+            }
+            Some(_) => {
+                return Err(ConfigError::Invalid {
+                    path: path.to_path_buf(),
+                    message: "current_color: expected a string".into(),
+                });
+            }
+            None => ColorName::default(),
+        };
+
         let wrap = match table.get("wrap") {
             Some(toml::Value::Integer(n)) => (*n).clamp(40, 200) as usize,
             Some(_) => {
@@ -249,6 +271,7 @@ impl Config {
             undo_depth,
             prompt_why,
             ascii,
+            current_color,
             poll_ms,
         };
         Ok((config, warnings))
@@ -270,6 +293,7 @@ impl Config {
             undo_depth: 50,
             prompt_why: true,
             ascii: Toggle::Auto,
+            current_color: ColorName::default(),
             poll_ms: 500,
         })
     }
@@ -297,6 +321,7 @@ impl Config {
              undo_depth = {undo}\n\
              prompt_why = {why}\n\
              ascii = \"{ascii}\"\n\
+             current_color = \"{current_color}\"\n\
              poll_ms = {poll}\n",
             store = self.store_raw,
             backups = self.backups_raw,
@@ -305,6 +330,7 @@ impl Config {
             undo = self.undo_depth,
             why = self.prompt_why,
             ascii = self.ascii.as_str(),
+            current_color = self.current_color.as_str(),
             poll = self.poll_ms,
         )
     }
@@ -318,5 +344,6 @@ const KNOWN_KEYS: &[&str] = &[
     "undo_depth",
     "prompt_why",
     "ascii",
+    "current_color",
     "poll_ms",
 ];
