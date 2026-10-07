@@ -34,8 +34,8 @@ _arguments "${_arguments_options[@]}" : \
 '-w+[Supply the why inline (skips the prompt)]:WHY:_default' \
 '--why=[Supply the why inline (skips the prompt)]:WHY:_default' \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
-'-p[Pick the target task instead of using the current task]' \
-'--pick[Pick the target task instead of using the current task]' \
+'-s[Switch to choose the target task instead of using the current task]' \
+'--switch[Switch to choose the target task instead of using the current task]' \
 '-n[Do not move the cursor onto the new task]' \
 '--stay[Do not move the cursor onto the new task]' \
 '--no-why[Do not ask for a why]' \
@@ -44,7 +44,7 @@ _arguments "${_arguments_options[@]}" : \
 '*::text:_default' \
 && ret=0
 ;;
-(also)
+(by)
 _arguments "${_arguments_options[@]}" : \
 '-w+[]:WHY:_default' \
 '--why=[]:WHY:_default' \
@@ -60,21 +60,21 @@ _arguments "${_arguments_options[@]}" : \
 '-w+[]:WHY:_default' \
 '--why=[]:WHY:_default' \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
-'-p[]' \
-'--pick[]' \
+'-s[]' \
+'--switch[]' \
 '--no-why[]' \
 '-h[Print help]' \
 '--help[Print help]' \
 '*::text:_default' \
 && ret=0
 ;;
-(add)
+(and)
 _arguments "${_arguments_options[@]}" : \
 '-w+[]:WHY:_default' \
 '--why=[]:WHY:_default' \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
-'-p[]' \
-'--pick[]' \
+'-s[]' \
+'--switch[]' \
 '--no-why[]' \
 '-h[Print help]' \
 '--help[Print help]' \
@@ -104,8 +104,8 @@ _arguments "${_arguments_options[@]}" : \
 (stop)
 _arguments "${_arguments_options[@]}" : \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
-'-p[]' \
-'--pick[]' \
+'-s[]' \
+'--switch[]' \
 '-h[Print help]' \
 '--help[Print help]' \
 '*::reason:_default' \
@@ -121,8 +121,8 @@ _arguments "${_arguments_options[@]}" : \
 (why)
 _arguments "${_arguments_options[@]}" : \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
-'-p[]' \
-'--pick[]' \
+'-s[]' \
+'--switch[]' \
 '-h[Print help]' \
 '--help[Print help]' \
 && ret=0
@@ -134,8 +134,8 @@ _arguments "${_arguments_options[@]}" : \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
 '-c[]' \
 '--clear[]' \
-'-p[]' \
-'--pick[]' \
+'-s[]' \
+'--switch[]' \
 '-h[Print help]' \
 '--help[Print help]' \
 '*::text:_default' \
@@ -144,14 +144,14 @@ _arguments "${_arguments_options[@]}" : \
 (rename)
 _arguments "${_arguments_options[@]}" : \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
-'-p[]' \
-'--pick[]' \
+'-s[]' \
+'--switch[]' \
 '-h[Print help]' \
 '--help[Print help]' \
 '*::text:_default' \
 && ret=0
 ;;
-(pick)
+(switch)
 _arguments "${_arguments_options[@]}" : \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
 '-h[Print help]' \
@@ -221,7 +221,7 @@ _arguments "${_arguments_options[@]}" : \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
 '-h[Print help]' \
 '--help[Print help]' \
-'*::target:_default' \
+'::index:_default' \
 && ret=0
 ;;
 (done)
@@ -246,7 +246,7 @@ _arguments "${_arguments_options[@]}" : \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
 '-h[Print help]' \
 '--help[Print help]' \
-'*::target:_default' \
+'::index:_default' \
 && ret=0
 ;;
         esac
@@ -281,10 +281,10 @@ _arguments "${_arguments_options[@]}" : \
 '--goal=[]:NAME:_default' \
 '--new-goal=[]:TITLE:_default' \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
-'-p[]' \
-'--pick[]' \
-'-s[]' \
-'--switch[]' \
+'-s[Switch to choose the parent task instead of making a root]' \
+'--switch[Switch to choose the parent task instead of making a root]' \
+'-a[Make the chosen goal active]' \
+'--activate[Make the chosen goal active]' \
 '-h[Print help]' \
 '--help[Print help]' \
 '::index:_default' \
@@ -313,8 +313,8 @@ _arguments "${_arguments_options[@]}" : \
 (at)
 _arguments "${_arguments_options[@]}" : \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
-'-p[]' \
-'--pick[]' \
+'-s[]' \
+'--switch[]' \
 '--clear[Remove the schedule]' \
 '-h[Print help]' \
 '--help[Print help]' \
@@ -394,9 +394,9 @@ esac
 _trk_commands() {
     local commands; commands=(
 'need:What am I doing, and why' \
-'also:Also, this other thing (a new top-level task)' \
-'then:Once this is done, then that (a new parent above the target)' \
-'add:A sibling of the target, right after it' \
+'by:Goal by X\: a direct task under the active goal' \
+'then:Once this is done, then X\: wrap the current chain in a new parent' \
+'and:And X\: another task at the same level as the target' \
 'done:Finish the current task and walk back up' \
 'drop:Abandon the current task' \
 'stop:Leave the current task unfinished, with a reason' \
@@ -404,7 +404,7 @@ _trk_commands() {
 'why:Chain of notes from the root to the current task' \
 'note:Read or add note lines on a task' \
 'rename:Change a task'\''s text' \
-'pick:Choose the current task' \
+'switch:Switch to another task' \
 'list:The whole task tree of the active goal' \
 'undo:Undo the last N changes' \
 'goal:Goals\: show, list, new, switch, done, rename, reopen' \
@@ -420,25 +420,25 @@ _trk_commands() {
     )
     _describe -t commands 'trk commands' commands "$@"
 }
-(( $+functions[_trk__subcmd__add_commands] )) ||
-_trk__subcmd__add_commands() {
-    local commands; commands=()
-    _describe -t commands 'trk add commands' commands "$@"
-}
 (( $+functions[_trk__subcmd__agenda_commands] )) ||
 _trk__subcmd__agenda_commands() {
     local commands; commands=()
     _describe -t commands 'trk agenda commands' commands "$@"
 }
-(( $+functions[_trk__subcmd__also_commands] )) ||
-_trk__subcmd__also_commands() {
+(( $+functions[_trk__subcmd__and_commands] )) ||
+_trk__subcmd__and_commands() {
     local commands; commands=()
-    _describe -t commands 'trk also commands' commands "$@"
+    _describe -t commands 'trk and commands' commands "$@"
 }
 (( $+functions[_trk__subcmd__at_commands] )) ||
 _trk__subcmd__at_commands() {
     local commands; commands=()
     _describe -t commands 'trk at commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__by_commands] )) ||
+_trk__subcmd__by_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk by commands' commands "$@"
 }
 (( $+functions[_trk__subcmd__completions_commands] )) ||
 _trk__subcmd__completions_commands() {
@@ -569,11 +569,6 @@ _trk__subcmd__note_commands() {
     local commands; commands=()
     _describe -t commands 'trk note commands' commands "$@"
 }
-(( $+functions[_trk__subcmd__pick_commands] )) ||
-_trk__subcmd__pick_commands() {
-    local commands; commands=()
-    _describe -t commands 'trk pick commands' commands "$@"
-}
 (( $+functions[_trk__subcmd__prompt_commands] )) ||
 _trk__subcmd__prompt_commands() {
     local commands; commands=()
@@ -593,6 +588,11 @@ _trk__subcmd__start_commands() {
 _trk__subcmd__stop_commands() {
     local commands; commands=()
     _describe -t commands 'trk stop commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__switch_commands] )) ||
+_trk__subcmd__switch_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk switch commands' commands "$@"
 }
 (( $+functions[_trk__subcmd__then_commands] )) ||
 _trk__subcmd__then_commands() {

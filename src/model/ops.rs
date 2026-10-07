@@ -17,7 +17,7 @@ pub enum Request {
         target: Target,
         stay: bool,
     },
-    Also {
+    By {
         text: String,
         why: Option<String>,
     },
@@ -26,7 +26,7 @@ pub enum Request {
         why: Option<String>,
         target: Target,
     },
-    Add {
+    And {
         text: String,
         why: Option<String>,
         target: Target,
@@ -42,7 +42,7 @@ pub enum Request {
         target: Target,
         reason: String,
     },
-    Pick {
+    Switch {
         target: Target,
     },
     Go,
@@ -192,13 +192,13 @@ pub fn apply(
             target,
             stay,
         } => op_need(&mut doc, text, why, target, *stay, now)?,
-        Request::Also { text, why } => op_also(&mut doc, text, why, now)?,
+        Request::By { text, why } => op_by(&mut doc, text, why, now)?,
         Request::Then { text, why, target } => op_then(&mut doc, text, why, target, now)?,
-        Request::Add { text, why, target } => op_add(&mut doc, text, why, target, now)?,
+        Request::And { text, why, target } => op_and(&mut doc, text, why, target, now)?,
         Request::Done { force } => op_done(&mut doc, *force, now)?,
         Request::Drop { force, why } => op_drop(&mut doc, *force, why, now)?,
         Request::Stop { target, reason } => op_stop(&mut doc, target, reason)?,
-        Request::Pick { target } => op_pick(&mut doc, target)?,
+        Request::Switch { target } => op_switch(&mut doc, target)?,
         Request::Go => op_go(&mut doc)?,
         Request::NoteAdd { target, text } => op_note_add(&mut doc, target, text)?,
         Request::NoteReplace { target, text } => op_note_replace(&mut doc, target, text)?,
@@ -330,7 +330,7 @@ fn op_need(
     Ok(Outcome::status())
 }
 
-fn op_also(
+fn op_by(
     doc: &mut Doc,
     text: &str,
     why: &Option<String>,
@@ -378,39 +378,26 @@ fn op_then(
     let mut new_task = Task::new(id, text.trim().to_string(), now);
     push_why(&mut new_task, why);
 
-    let path = {
+    // `then` wraps the current task's whole chain: the new task becomes the
+    // parent of the outermost ancestor (root) of the target, so finishing the
+    // current task walks up the chain in order.
+    let root_index = {
         let goal = doc.goal(goal_id).expect("active goal exists");
-        tree::find_path(goal, target_id).ok_or(OpError::TargetNotFound(target_id))?
+        let path = tree::find_path(goal, target_id).ok_or(OpError::TargetNotFound(target_id))?;
+        path[0]
     };
 
     let goal = doc.goal_mut(goal_id).expect("active goal exists");
-    if path.len() == 1 {
-        let idx = path[0];
-        let old = goal.roots.remove(idx);
-        new_task.children.push(old);
-        goal.roots.insert(idx, new_task);
-    } else {
-        let last = *path.last().expect("non-empty path");
-        let parent = tree::task_at_mut(goal, &path[..path.len() - 1]).expect("parent exists");
-        let old = parent.children.remove(last);
-        new_task.children.push(old);
-        parent.children.insert(last, new_task);
+    let old_root = goal.roots.remove(root_index);
+    new_task.children.push(old_root);
+    goal.roots.insert(root_index, new_task);
+    if goal.cursor.is_none() {
+        goal.cursor = Some(id);
     }
-
-    let mut outcome = Outcome::status();
-    if path.len() > 1 {
-        let goal = doc.goal(goal_id).expect("active goal exists");
-        if let Some(grandparent_id) = tree::parent_of(goal, target_id).flatten() {
-            outcome.messages.push(Message::normal(format!(
-                "also under: {}",
-                find_task_text(goal, grandparent_id)
-            )));
-        }
-    }
-    Ok(outcome)
+    Ok(Outcome::status())
 }
 
-fn op_add(
+fn op_and(
     doc: &mut Doc,
     text: &str,
     why: &Option<String>,
@@ -658,7 +645,7 @@ fn op_stop(doc: &mut Doc, target: &Target, reason: &str) -> Result<Outcome, OpEr
     Ok(Outcome::status())
 }
 
-fn op_pick(doc: &mut Doc, target: &Target) -> Result<Outcome, OpError> {
+fn op_switch(doc: &mut Doc, target: &Target) -> Result<Outcome, OpError> {
     let goal_id = doc.active.ok_or(OpError::NoActiveGoal)?;
     let id = resolve_target(doc, target)?;
     let goal = doc.goal_mut(goal_id).expect("active goal exists");

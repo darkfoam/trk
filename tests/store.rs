@@ -34,7 +34,7 @@ fn concurrent_mutations_do_not_corrupt_the_store() {
             let config = config.clone();
             thread::spawn(move || {
                 for i in 0..15 {
-                    run(&store, &config, &["also", &format!("w{worker}-{i}")]);
+                    run(&store, &config, &["by", &format!("w{worker}-{i}")]);
                 }
             })
         })
@@ -65,7 +65,7 @@ fn undo_depth_is_respected() {
 
     run(&store, &config, &["goal", "new", "G"]);
     for i in 0..5 {
-        run(&store, &config, &["also", &format!("t{i}")]);
+        run(&store, &config, &["by", &format!("t{i}")]);
     }
     for _ in 0..3 {
         run(&store, &config, &["undo"]);

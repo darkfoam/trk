@@ -38,7 +38,7 @@ pub fn status_view(doc: &Doc, width: usize, style: Style) -> Vec<StyledLine> {
         if doc.goals.is_empty() {
             return vec![
                 plain("trk: nothing here yet"),
-                plain("  add your first task: trk also <what to do>"),
+                plain("  add your first task: trk by <what to do>"),
                 plain("  trk start opens the live list"),
             ];
         }
@@ -49,9 +49,9 @@ pub fn status_view(doc: &Doc, width: usize, style: Style) -> Vec<StyledLine> {
     let Some(cursor) = goal.cursor else {
         out.push(plain("no current task"));
         if goal.has_open_tasks() {
-            out.push(plain("try: trk pick"));
+            out.push(plain("try: trk switch"));
         } else {
-            out.push(plain("try: trk goal done or trk also <task>"));
+            out.push(plain("try: trk goal done or trk by <task>"));
         }
         return out;
     };

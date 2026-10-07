@@ -128,7 +128,7 @@ fn done_on_task_with_children_is_blocked() {
 }
 
 #[test]
-fn then_inserts_parent_above_target() {
+fn then_wraps_the_current_chain() {
     let doc = goal_with_tree();
     let (next, _) = apply(
         &doc,
@@ -141,13 +141,18 @@ fn then_inserts_parent_above_target() {
     )
     .unwrap();
     let goal = next.active_goal().unwrap();
-    // t3 now has a new parent, and that parent holds t3.
-    let task = goal.find(3).unwrap();
-    assert!(task.children.is_empty(), "t3 should be a leaf again");
     let wrap = goal.find(7).unwrap();
     assert_eq!(wrap.text, "Wrap");
     assert_eq!(wrap.children.len(), 1);
-    assert_eq!(wrap.children[0].id, 3);
+    assert_eq!(
+        wrap.children[0].id, 1,
+        "the new task wraps the root of the target's chain"
+    );
+    // The whole original subtree is preserved under the new parent.
+    assert!(goal.find(1).unwrap().find(3).is_some());
+    // The unrelated root is untouched.
+    assert_eq!(goal.roots.len(), 2);
+    assert!(goal.roots.iter().any(|r| r.id == 4));
 }
 
 #[test]
@@ -161,7 +166,7 @@ fn landing_rule_reopens_stopped() {
     }
     let (next, outcome) = apply(
         &doc,
-        &Request::Pick {
+        &Request::Switch {
             target: Target::Task(4),
         },
         ts("2026-10-07T10:00:00-05:00"),

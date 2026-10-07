@@ -41,15 +41,15 @@ impl Env {
 
 fn build_main_scenario(env: &Env) {
     env.run(&["goal", "new", "Ship login fix"]).success();
-    env.run(&["also", "Fix login bug", "-w", "customers locked out"])
+    env.run(&["by", "Fix login bug", "-w", "customers locked out"])
         .success();
     env.run(&["need", "Reproduce on staging", "-w", "need a failing case"])
         .success();
     env.run(&["need", "Get staging creds", "-w", "can't log in"])
         .success();
-    env.run(&["also", "Call internet company", "-w", "wifi flaky"])
+    env.run(&["by", "Call internet company", "-w", "wifi flaky"])
         .success();
-    env.run(&["pick", "1"]).success();
+    env.run(&["switch", "1"]).success();
     env.run(&[
         "need",
         "-n",
@@ -58,7 +58,7 @@ fn build_main_scenario(env: &Env) {
         "might explain the 401s",
     ])
     .success();
-    env.run(&["pick", "3"]).success();
+    env.run(&["switch", "3"]).success();
     env.run(&["then", "Document the process", "-w", "after the fix ships"])
         .success();
 }
@@ -83,9 +83,6 @@ fn main_scenario_done_and_undo() {
 
     env.run(&["done"])
         .success()
-        .stdout(predicate::str::contains("back to: Document the process"));
-    env.run(&["done"])
-        .success()
         .stdout(predicate::str::contains("back to: Reproduce on staging"));
     env.run(&["done"])
         .success()
@@ -93,6 +90,9 @@ fn main_scenario_done_and_undo() {
     env.run(&["done"])
         .success()
         .stdout(predicate::str::contains("back to: Fix login bug"));
+    env.run(&["done"])
+        .success()
+        .stdout(predicate::str::contains("back to: Document the process"));
     env.run(&["done"])
         .success()
         .stdout(predicate::str::contains("next top-level task"));
@@ -111,7 +111,7 @@ fn blocked_done_exits_3_and_leaves_store_unchanged() {
     let env = Env::new();
     build_main_scenario(&env);
     let before = fs::read_to_string(env.store()).unwrap();
-    env.run(&["pick", "1"]).success();
+    env.run(&["switch", "2"]).success();
     let before_pick = fs::read_to_string(env.store()).unwrap();
     let _ = before;
     env.run(&["done"])
@@ -124,7 +124,7 @@ fn blocked_done_exits_3_and_leaves_store_unchanged() {
 fn forced_done_marks_only_the_task() {
     let env = Env::new();
     build_main_scenario(&env);
-    env.run(&["pick", "1"]).success();
+    env.run(&["switch", "2"]).success();
     env.run(&["done", "-f"]).success();
     let text = fs::read_to_string(env.store()).unwrap();
     assert!(text.contains("[x] t1"), "{text}");
@@ -203,9 +203,9 @@ fn prompt_prints_nothing_without_goal() {
 fn goals_keep_their_own_cursor() {
     let env = Env::new();
     env.run(&["goal", "new", "One"]).success();
-    env.run(&["also", "one task"]).success();
+    env.run(&["by", "one task"]).success();
     env.run(&["goal", "new", "Two"]).success();
-    env.run(&["also", "two task"]).success();
+    env.run(&["by", "two task"]).success();
     env.run(&["goal", "switch", "1"])
         .success()
         .stdout(predicate::str::contains("one task"));
@@ -235,7 +235,7 @@ fn config_show_and_path() {
 fn at_schedules_and_agenda_lists() {
     let env = Env::new();
     env.run(&["goal", "new", "G"]).success();
-    env.run(&["also", "Renew domain"]).success();
+    env.run(&["by", "Renew domain"]).success();
     env.run(&["at", "2026-10-09"]).success();
     env.run(&["agenda"])
         .success()
@@ -247,7 +247,7 @@ fn at_schedules_and_agenda_lists() {
 fn at_parses_relative_and_time() {
     let env = Env::new();
     env.run(&["goal", "new", "G"]).success();
-    env.run(&["also", "task"]).success();
+    env.run(&["by", "task"]).success();
     env.run(&["at", "tomorrow", "3pm"]).success();
     let text = fs::read_to_string(env.store()).unwrap();
     assert!(text.contains("@ at=2026-10-08T15:00:00-05:00"), "{text}");
@@ -257,7 +257,7 @@ fn at_parses_relative_and_time() {
 fn at_rejects_bad_grammar_with_exit_2() {
     let env = Env::new();
     env.run(&["goal", "new", "G"]).success();
-    env.run(&["also", "task"]).success();
+    env.run(&["by", "task"]).success();
     env.run(&["at", "whenever"]).code(2);
 }
 
@@ -265,7 +265,7 @@ fn at_rejects_bad_grammar_with_exit_2() {
 fn log_shows_completed_task() {
     let env = Env::new();
     env.run(&["goal", "new", "G"]).success();
-    env.run(&["also", "Write repro steps"]).success();
+    env.run(&["by", "Write repro steps"]).success();
     env.run(&["done"]).success();
     env.run(&["log"])
         .success()
@@ -289,7 +289,7 @@ fn inbox_take_new_goal_creates_goal_and_task() {
 fn prompt_prints_current_task() {
     let env = Env::new();
     env.run(&["goal", "new", "G"]).success();
-    env.run(&["also", "ship it"]).success();
+    env.run(&["by", "ship it"]).success();
     env.run(&["prompt"])
         .success()
         .stdout(predicate::str::contains("ship it"));
@@ -314,7 +314,7 @@ fn wrap_config_limits_output_width() {
     fs::write(env.dir.path().join("config.toml"), config).unwrap();
     env.run(&["goal", "new", "G"]).success();
     let long = "word ".repeat(40);
-    env.run(&["also", &long]).success();
+    env.run(&["by", &long]).success();
     let output = env.cmd().output().unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
     for line in stdout.lines() {

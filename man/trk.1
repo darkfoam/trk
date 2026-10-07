@@ -13,7 +13,7 @@ trk \- adhd compliant task tracking
 .PP
 .B trk
 .B need
-.RI [ \-p ]
+.RI [ \-s ]
 .RI [ \-n ]
 .RI [ \-w
 .IR why ]
@@ -21,7 +21,7 @@ trk \- adhd compliant task tracking
 .IR text ...
 .br
 .B trk
-.B also
+.B by
 .RI [ \-w
 .IR why ]
 .RI [ \-\-no\-why ]
@@ -29,15 +29,15 @@ trk \- adhd compliant task tracking
 .br
 .B trk
 .B then
-.RI [ \-p ]
+.RI [ \-s ]
 .RI [ \-w
 .IR why ]
 .RI [ \-\-no\-why ]
 .IR text ...
 .br
 .B trk
-.B add
-.RI [ \-p ]
+.B and
+.RI [ \-s ]
 .RI [ \-w
 .IR why ]
 .RI [ \-\-no\-why ]
@@ -54,7 +54,7 @@ trk \- adhd compliant task tracking
 .br
 .B trk
 .B stop
-.RI [ \-p ]
+.RI [ \-s ]
 .IR reason ...
 .br
 .B trk
@@ -62,11 +62,11 @@ trk \- adhd compliant task tracking
 .br
 .B trk
 .B why
-.RI [ \-p ]
+.RI [ \-s ]
 .br
 .B trk
 .B note
-.RI [ \-p ]
+.RI [ \-s ]
 .RI [ \-r
 .IR text ]
 .RI [ \-c ]
@@ -74,11 +74,11 @@ trk \- adhd compliant task tracking
 .br
 .B trk
 .B rename
-.RI [ \-p ]
+.RI [ \-s ]
 .IR text ...
 .br
 .B trk
-.B pick
+.B switch
 .RI [ N ]
 .br
 .B trk
@@ -108,7 +108,7 @@ trk \- adhd compliant task tracking
 .br
 .B trk
 .B at
-.RI [ \-p ]
+.RI [ \-s ]
 .RI [ \-\-clear ]
 .RI [ when ...]
 .br
@@ -171,7 +171,7 @@ constraint, and it applies to every command:
 Commands are short, lowercase, plain words that read like thoughts
 .RB ( need ,
 .BR then ,
-.BR also ,
+.BR by ,
 .BR done ).
 .IP \(bu 2
 No command requires quoting. Free text is taken from the remaining arguments as
@@ -271,14 +271,17 @@ it. Use
 .BR "trk need X" .
 .IP "2." 3
 "Also, X." Create an unrelated top\-level task; you stay where you are. Use
-.BR "trk also X" .
+.BR "trk by X" .
+For another task at the same level as the current one, use
+.BR "trk and X" .
 .IP "3." 3
-"Then, once this is done, X." Insert a new parent above a task; you stay. Use
+"Then, once this is done, X." Wrap the current chain in a new parent; you stay.
+Use
 .BR "trk then X" .
 .IP "4." 3
 "Task T needs X." Create a child of some other task T; you stay. Use
-.B "trk need \-p X"
-and pick T, or move to T first.
+.B "trk need \-s X"
+and switch to T, or move to T first.
 .PP
 A fifth action, finishing, walks you back up the chain and tells you where you
 are and why. Use
@@ -358,9 +361,9 @@ and up to eight lines of open descendants with a summary if there are more.
 .RS 4
 .nf
 Ship login fix
-  Fix login bug
-    Reproduce on staging
-      Document the process
+  Document the process
+    Fix login bug
+      Reproduce on staging
         > Get staging creds
           why: can't log in
 .fi
@@ -369,9 +372,9 @@ Ship login fix
 If the active goal has no current task, it prints the goal title and
 .BR "no current task" ,
 followed by a suggestion: if open tasks exist,
-.BR "try: trk pick" ;
+.BR "try: trk switch" ;
 otherwise
-.BR "try: trk goal done or trk also <task>" .
+.BR "try: trk goal done or trk by <task>" .
 If no goal is active, it prints
 .BR "no goal yet. try: trk goal new <title>" .
 On a brand\-new store it prints a short hint instead.
@@ -383,7 +386,7 @@ and immediately see the chain of reasons that led me here. I do not have to
 remember anything; the tree remembers for me.
 .SS trk need
 .nf
-trk need [\-p] [\-n] [\-w why] [\-\-no\-why] text ...
+trk need [\-s] [\-n] [\-w why] [\-\-no\-why] text ...
 .fi
 .PP
 "I need this to finish what I am doing." Creates a new open task and appends it
@@ -391,7 +394,7 @@ as the last child of the target, then (normally) moves the cursor onto the new
 task so you descend into it. This is the single most important command for
 capturing a rabbit hole.
 .TP
-.B \-p, \-\-pick
+.B \-s, \-\-switch
 Choose the parent task in a picker instead of using the current task. The
 cursor does not move.
 .TP
@@ -426,9 +429,9 @@ and answer the why prompt with
 .BR "need a failing case" .
 Now the task I am on is "Reproduce on staging", and the reason it exists is
 recorded above it. If I get distracted, the chain still makes sense.
-.SS trk also
+.SS trk by
 .nf
-trk also [\-w why] [\-\-no\-why] text ...
+trk by [\-w why] [\-\-no\-why] text ...
 .fi
 .PP
 "Also, this other thing." Creates a new open task and appends it as the last
@@ -445,7 +448,7 @@ Skip the why prompt.
 .PP
 .RS 4
 .nf
-$ trk also Call internet company \-w "wifi flaky"
+$ trk by Call internet company \-w "wifi flaky"
 added: Call internet company
 Ship login fix
   ...
@@ -455,27 +458,40 @@ Ship login fix
 .I "Thought process:"
 Mid\-debug, the wifi drops and I realize I have to call the internet company.
 It is not part of fixing the login bug; it is a separate top\-level task. I type
-.B trk also
+.B trk by
 so it lands at the top level and I stay exactly where I was, on the login bug.
 If I had typed
 .BR need ,
 I would have buried it under the current task, which would be wrong.
 .SS trk then
 .nf
-trk then [\-p] [\-w why] [\-\-no\-why] text ...
+trk then [\-s] [\-w why] [\-\-no\-why] text ...
 .fi
 .PP
-"Once I am done with this, then that." Inserts a new task as a parent directly
-above the target, making the target its only child. The new task stands where
-the target stood; the target now lies under it. The cursor does not move, unless
-it was empty.
+"Once I am done with this, then that." Wraps the current task's whole chain in
+a new task: the new task becomes the parent of the outermost ancestor (the root
+of the branch) of the target, so the target and everything above it move under
+the new task. The cursor does not move, unless it was empty.
 .PP
-The practical effect is a prerequisite in the other direction: the new task
-must be completed before the old one can be, because the old one is now its
-child. The target's former parent now waits on the new task as well. This is
-intended.
+This is how you build a plan outward from the first step. Each
+.B then
+adds the next thing to do as the new outer task. Because the new task is the
+parent, it cannot be completed until the chain beneath it is done; finishing the
+current task walks you up the chain in order.
+.PP
+For example, if you are on "Download the USB image" and run
+.B trk then "Install the USB image to a flash drive"
+then "Install the USB image to a flash drive" becomes the parent and "Download
+the USB image" its child. Run
+.B trk then "Install the image to a system"
+next, and it wraps the chain again, becoming the parent of "Install the USB
+image to a flash drive". Continue and you build a step\-by\-step list that
+reads from the top down while you stay on the first step; finishing that step
+with
+.B trk done
+moves you to the next one.
 .TP
-.B \-p, \-\-pick
+.B \-s, \-\-switch
 Choose the target in a picker instead of using the current task.
 .TP
 .B \-w, \-\-why \fIwhy\fP
@@ -488,9 +504,9 @@ Skip the why prompt.
 .nf
 $ trk then Document the process \-w "after the fix ships"
 Ship login fix
-  Fix login bug
-    Reproduce on staging
-      Document the process
+  Document the process
+    Fix login bug
+      Reproduce on staging
         > Get staging creds
 .fi
 .RE
@@ -500,18 +516,18 @@ I am about to go get staging credentials, but I realize that after the fix
 ships I will need to document the process, and that step logically contains the
 credential\-getting. I use
 .B trk then
-so "Document the process" becomes the umbrella and my current work nests inside
+so "Document the process" wraps the whole chain and my current work nests inside
 it. I have not lost my place; I have just given it a larger frame.
-.SS trk add
+.SS trk and
 .nf
-trk add [\-p] [\-w why] [\-\-no\-why] text ...
+trk and [\-s] [\-w why] [\-\-no\-why] text ...
 .fi
 .PP
 Creates a new task as a sibling of the target, placed immediately after it. The
 cursor does not move, unless it was empty. This is the "one more thing at the
 same level" command.
 .TP
-.B \-p, \-\-pick
+.B \-s, \-\-switch
 Choose the target in a picker.
 .TP
 .B \-w, \-\-why \fIwhy\fP
@@ -523,9 +539,9 @@ Skip the why prompt.
 .I "Thought process:"
 I have three errands at the same level and I have already captured the first.
 Rather than start a new branch with
-.BR also ,
+.BR by ,
 I put the next one right beside its sibling with
-.BR add .
+.BR and .
 The ordering keeps related tasks together.
 .SS trk done
 .nf
@@ -571,13 +587,13 @@ lists the outstanding sub\-tasks, and the exit code is 3.
 .RS 4
 .nf
 $ trk done
-back to: Document the process
-  why: after the fix ships
+back to: Reproduce on staging
+  why: need a failing case
 Ship login fix
-  Fix login bug
-    Reproduce on staging
-      > Document the process
-        why: after the fix ships
+  Document the process
+    Fix login bug
+      > Reproduce on staging
+        why: need a failing case
 .fi
 .RE
 .PP
@@ -618,7 +634,7 @@ so the task disappears from my working set without erasing the fact that it
 existed.
 .SS trk stop
 .nf
-trk stop [\-p] reason ...
+trk stop [\-s] reason ...
 .fi
 .PP
 Leave the target task unfinished, with a reason. Sets the state to stopped. The
@@ -634,7 +650,7 @@ until the cursor lands on the task again, or
 .B trk go
 is run, or the task is done or dropped.
 .TP
-.B \-p, \-\-pick
+.B \-s, \-\-switch
 Choose the task in a picker.
 .PP
 .I "Thought process:"
@@ -660,7 +676,7 @@ and immediately get both the acknowledgment that I had paused this and the full
 chain of reasons above me, so I can resume without reconstructing context.
 .SS trk why
 .nf
-trk why [\-p]
+trk why [\-s]
 .fi
 .PP
 Print the why chain: the path from the goal root to the current task, each node
@@ -668,19 +684,21 @@ followed by its note. Nodes without a note show
 .B "why: (none)"
 in dim text. The target is marked with the cursor symbol. Read\-only.
 .TP
-.B \-p, \-\-pick
-Show the chain for a picked task instead of the current task.
+.B \-s, \-\-switch
+Show the chain for a chosen task instead of the current task.
 .PP
 .RS 4
 .nf
 $ trk why
 Ship login fix
-  Fix login bug
-    why: customers locked out
-    Reproduce on staging
-      why: need a failing case
-      > Get staging creds
-        why: can't log in
+  Document the process
+    why: after the fix ships
+    Fix login bug
+      why: customers locked out
+      Reproduce on staging
+        why: need a failing case
+        > Get staging creds
+          why: can't log in
 .fi
 .RE
 .PP
@@ -692,7 +710,7 @@ locked out, because we are shipping the login fix. The tool answers the
 question I could not have answered from memory.
 .SS trk note
 .nf
-trk note [\-p] [\-r text] [\-c] text ...
+trk note [\-s] [\-r text] [\-c] text ...
 .fi
 .PP
 Read or add note lines on a task. With no text, print the current task's note
@@ -705,8 +723,8 @@ Replace all note lines with the given text.
 .B \-c, \-\-clear
 Remove all note lines.
 .TP
-.B \-p, \-\-pick
-Act on a picked task.
+.B \-s, \-\-switch
+Act on a chosen task.
 .PP
 After a mutation,
 .B trk
@@ -721,12 +739,12 @@ the real problem is a stale token. I run
 so the chain tells the truth the next time I read it.
 .SS trk rename
 .nf
-trk rename [\-p] text ...
+trk rename [\-s] text ...
 .fi
 .PP
 Replace the target's text. Output is the status view.
 .TP
-.B \-p, \-\-pick
+.B \-s, \-\-switch
 Choose the task in a picker.
 .PP
 .I "Thought process:"
@@ -734,9 +752,9 @@ I wrote "Fix login bug" before I understood it, and now I know it is really
 "Fix session refresh". I
 .B trk rename
 so the label matches reality.
-.SS trk pick
+.SS trk switch
 .nf
-trk pick [N]
+trk switch [N]
 .fi
 .PP
 Choose the current task. With
@@ -747,26 +765,25 @@ select row N of the numbering shown by
 .BR N ,
 open the picker on the active goal.
 .PP
-After picking, the cursor moves and the landing rule applies: if the chosen
+After switching, the cursor moves and the landing rule applies: if the chosen
 task was stopped, it is reopened and
 .B trk
 prints
 .BR "stopped earlier: <reason>" .
-If the picked task has open descendants,
+If the chosen task has open descendants,
 .B trk
 prints an orange warning that it cannot be completed until they are done, but
 the cursor still moves. Pressing Esc in the picker exits 5 and changes nothing.
-Picking the current task is a no\-op that still prints status.
+Switching to the current task is a no\-op that still prints status.
 .PP
 .RS 4
 .nf
-$ trk pick 4
+$ trk switch 5
 Ship login fix
-  Fix login bug
-    Reproduce on staging
-      Document the process
-        > Get staging creds
-          why: can't log in
+  Document the process
+    Fix login bug
+      > Check auth logs
+        why: might explain the 401s
 .fi
 .RE
 .PP
@@ -775,9 +792,9 @@ I have been heads\-down on one branch and I want to deliberately switch to
 another task in the same goal. I run
 .B trk list
 to see the numbers, then
-.B trk pick 4
+.B trk switch 5
 to jump straight there, or
-.B trk pick
+.B trk switch
 to choose interactively.
 .SS trk list
 .nf
@@ -787,7 +804,7 @@ trk list [\-a] [\-\-all\-goals]
 Print the whole task tree of the active goal. The first line is the goal title.
 Open and stopped tasks are numbered depth first from 1, and those numbers are
 what
-.B "trk pick N"
+.B "trk switch N"
 accepts. Indentation is two spaces per level, visually capped at twelve levels.
 Read\-only.
 .TP
@@ -803,18 +820,18 @@ that still has open descendants is always shown, dim, as context, even without
 .B \-\-all\-goals
 Print every goal, with its title as a heading and a blank line between goals.
 Numbering restarts per goal. Note that
-.B "pick N"
+.B "switch N"
 only applies to the active goal.
 .PP
 .RS 4
 .nf
 $ trk list
 Ship login fix
- 1  Fix login bug
- 2    Reproduce on staging
- 3      Document the process
+ 1  Document the process
+ 2    Fix login bug
+ 3      Reproduce on staging
  4        > Get staging creds
- 5    Check auth logs
+ 5      Check auth logs
  6  Call internet company
 .fi
 .RE
@@ -883,7 +900,7 @@ $ trk goal new Ship login fix
 goal: Ship login fix
 Ship login fix
 no current task
-try: trk goal done or trk also <task>
+try: trk goal done or trk by <task>
 .fi
 .RE
 .PP
@@ -970,7 +987,7 @@ Read\-only. When empty it prints
 .BR "inbox is empty" .
 .SS "trk inbox take"
 .nf
-trk inbox take [N] [\-\-goal name | \-\-new\-goal title] [\-p] [\-s]
+trk inbox take [N] [\-\-goal name | \-\-new\-goal title] [\-s] [\-a]
 .fi
 Take an item out of the inbox and turn it into a task.
 .IP "1." 3
@@ -991,14 +1008,14 @@ Create a task from the item text in that goal, as a root, appended last.
 Ask for a why, then remove the item from the inbox.
 .IP "5." 3
 The active goal and cursors are unchanged unless
-.B \-s/\-\-switch
+.B \-a/\-\-activate
 is given, which makes the goal active. The empty\-cursor rule applies inside
 that goal.
 .TP
-.B \-p, \-\-pick
-After the goal is chosen, pick the parent task instead of making a root.
-.TP
 .B \-s, \-\-switch
+After the goal is chosen, switch to the parent task instead of making a root.
+.TP
+.B \-a, \-\-activate
 Make the chosen goal active.
 .PP
 Non\-interactive use requires
@@ -1065,7 +1082,7 @@ run
 and see what actually shipped.
 .SS trk at
 .nf
-trk at [\-p] [\-\-clear] when ...
+trk at [\-s] [\-\-clear] when ...
 .fi
 Set the target's schedule. The schedule is stored as an
 .B @ at=
@@ -1075,7 +1092,7 @@ attribute and surfaces in
 .B \-\-clear
 Remove the schedule.
 .TP
-.B \-p, \-\-pick
+.B \-s, \-\-switch
 Choose the task in a picker.
 .PP
 With no
@@ -1195,7 +1212,7 @@ jumps the highlight back to the current task.
 .IP \(bu 2
 .B Enter
 picks the highlighted task, exactly as
-.BR "trk pick" .
+.BR "trk switch" .
 .IP \(bu 2
 .B d
 completes it as
@@ -1373,7 +1390,7 @@ $ trk goal new Ship login fix
 goal: Ship login fix
 Ship login fix
 no current task
-try: trk goal done or trk also <task>
+try: trk goal done or trk by <task>
 .fi
 .RE
 I now have an empty goal and no current task. The tool is telling me the next
@@ -1381,12 +1398,12 @@ move is to add a task.
 .PP
 .I "Step 1: the first task."
 The first concrete thing is the bug itself. It is top level, so I use
-.BR also ,
+.BR by ,
 not
 .BR need .
 .RS 4
 .nf
-$ trk also Fix login bug \-w "customers locked out"
+$ trk by Fix login bug \-w "customers locked out"
 added: Fix login bug
 Ship login fix
   > Fix login bug
@@ -1394,7 +1411,7 @@ Ship login fix
 .fi
 .RE
 The empty\-cursor rule made this task current even though
-.B also
+.B by
 normally stays put.
 .PP
 .I "Step 2: a prerequisite."
@@ -1429,7 +1446,7 @@ Ship login fix
 The wifi drops. This is not part of the login fix; it is a sibling at the top.
 .RS 4
 .nf
-$ trk also Call internet company \-w "wifi flaky"
+$ trk by Call internet company \-w "wifi flaky"
 added: Call internet company
 Ship login fix
   Fix login bug
@@ -1442,15 +1459,15 @@ me.
 .PP
 .I "Step 5: a task that belongs to an earlier one."
 I realize I should also check the auth logs, and that belongs to "Fix login
-bug", not to my current task. I pick the target.
+bug", not to my current task. I switch to the target.
 .RS 4
 .nf
-$ trk pick 1
+$ trk switch 1
 Ship login fix
   > Fix login bug
       why: customers locked out
 $ trk need \-n Check auth logs \-w "might explain the 401s"
-$ trk pick 3
+$ trk switch 3
 .fi
 .RE
 I used
@@ -1465,24 +1482,24 @@ after shipping.
 .nf
 $ trk then Document the process \-w "after the fix ships"
 Ship login fix
-  Fix login bug
-    Reproduce on staging
-      Document the process
+  Document the process
+    Fix login bug
+      Reproduce on staging
         > Get staging creds
           why: can't log in
 .fi
 .RE
 .B then
-inserted the new parent above my current task. My place is unchanged, but it now
-sits inside a larger, correct frame.
+wrapped my whole chain in the new task. My place is unchanged, but it now sits
+inside a larger, correct frame.
 .PP
 .I "Step 7: finishing the leaf."
 I have the credentials.
 .RS 4
 .nf
 $ trk done
-back to: Document the process
-  why: after the fix ships
+back to: Reproduce on staging
+  why: need a failing case
 .fi
 .RE
 .B trk
@@ -1495,10 +1512,10 @@ and named it.
 I continue finishing, one sensible step at a time:
 .RS 4
 .nf
-$ trk done    # Document the process is done; back to Reproduce on staging
 $ trk done    # Reproduce on staging is done; next: Check auth logs
 $ trk done    # Check auth logs is done; back to Fix login bug
-$ trk done    # Fix login bug is done; next top\-level task: Call internet company
+$ trk done    # Fix login bug is done; back to Document the process
+$ trk done    # Document the process is done; next top\-level task: Call internet company
 $ trk done    # Call internet company is done; goal has no open tasks
 .fi
 .RE
@@ -1565,16 +1582,16 @@ inbox
 
 goal g1 open 2026\-10\-07T09:00:00\-05:00 Ship login fix
   current t3
-  [ ] t1 2026\-10\-07T09:01:00\-05:00 Fix login bug
-    | customers locked out
-    [ ] t2 2026\-10\-07T09:02:00\-05:00 Reproduce on staging
-      | need a failing case
-      [ ] t6 2026\-10\-07T09:06:00\-05:00 Document the process
-        | after the fix ships
+  [ ] t6 2026\-10\-07T09:06:00\-05:00 Document the process
+    | after the fix ships
+    [ ] t1 2026\-10\-07T09:01:00\-05:00 Fix login bug
+      | customers locked out
+      [ ] t2 2026\-10\-07T09:02:00\-05:00 Reproduce on staging
+        | need a failing case
         [ ] t3 2026\-10\-07T09:03:00\-05:00 Get staging creds
           | can't log in
-    [ ] t5 2026\-10\-07T09:05:00\-05:00 Check auth logs
-      | might explain the 401s
+      [ ] t5 2026\-10\-07T09:05:00\-05:00 Check auth logs
+        | might explain the 401s
   [ ] t4 2026\-10\-07T09:04:00\-05:00 Call internet company
     | wifi flaky
 .fi

@@ -16,17 +16,17 @@ _trk() {
             ",$1")
                 cmd="trk"
                 ;;
-            trk,add)
-                cmd="trk__subcmd__add"
-                ;;
             trk,agenda)
                 cmd="trk__subcmd__agenda"
                 ;;
-            trk,also)
-                cmd="trk__subcmd__also"
+            trk,and)
+                cmd="trk__subcmd__and"
                 ;;
             trk,at)
                 cmd="trk__subcmd__at"
+                ;;
+            trk,by)
+                cmd="trk__subcmd__by"
                 ;;
             trk,completions)
                 cmd="trk__subcmd__completions"
@@ -64,9 +64,6 @@ _trk() {
             trk,note)
                 cmd="trk__subcmd__note"
                 ;;
-            trk,pick)
-                cmd="trk__subcmd__pick"
-                ;;
             trk,prompt)
                 cmd="trk__subcmd__prompt"
                 ;;
@@ -78,6 +75,9 @@ _trk() {
                 ;;
             trk,stop)
                 cmd="trk__subcmd__stop"
+                ;;
+            trk,switch)
+                cmd="trk__subcmd__switch"
                 ;;
             trk,then)
                 cmd="trk__subcmd__then"
@@ -128,38 +128,12 @@ _trk() {
 
     case "${cmd}" in
         trk)
-            opts="-h -V --color --help --version need also then add done drop stop go why note rename pick list undo goal jot inbox log at agenda start config prompt completions"
+            opts="-h -V --color --help --version need by then and done drop stop go why note rename switch list undo goal jot inbox log at agenda start config prompt completions"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
-                --color)
-                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
-                    return 0
-                    ;;
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        trk__subcmd__add)
-            opts="-p -w -h --pick --why --no-why --color --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                --why)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                -w)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
                 --color)
                     COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
@@ -189,8 +163,8 @@ _trk() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        trk__subcmd__also)
-            opts="-w -h --why --no-why --color --help"
+        trk__subcmd__and)
+            opts="-s -w -h --switch --why --no-why --color --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -216,12 +190,38 @@ _trk() {
             return 0
             ;;
         trk__subcmd__at)
-            opts="-p -h --pick --clear --color --help"
+            opts="-s -h --switch --clear --color --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        trk__subcmd__by)
+            opts="-w -h --why --no-why --color --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --why)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -w)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 --color)
                     COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
@@ -548,7 +548,7 @@ _trk() {
             return 0
             ;;
         trk__subcmd__inbox__subcmd__take)
-            opts="-p -s -h --goal --new-goal --pick --switch --color --help"
+            opts="-s -a -h --goal --new-goal --switch --activate --color --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -628,7 +628,7 @@ _trk() {
             return 0
             ;;
         trk__subcmd__need)
-            opts="-p -n -w -h --pick --stay --why --no-why --color --help"
+            opts="-s -n -w -h --switch --stay --why --no-why --color --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -654,7 +654,7 @@ _trk() {
             return 0
             ;;
         trk__subcmd__note)
-            opts="-r -c -p -h --replace --clear --pick --color --help"
+            opts="-r -c -s -h --replace --clear --switch --color --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -668,24 +668,6 @@ _trk() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
-                --color)
-                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
-                    return 0
-                    ;;
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        trk__subcmd__pick)
-            opts="-h --color --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
                 --color)
                     COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
@@ -720,7 +702,7 @@ _trk() {
             return 0
             ;;
         trk__subcmd__rename)
-            opts="-p -h --pick --color --help"
+            opts="-s -h --switch --color --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -756,7 +738,25 @@ _trk() {
             return 0
             ;;
         trk__subcmd__stop)
-            opts="-p -h --pick --color --help"
+            opts="-s -h --switch --color --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        trk__subcmd__switch)
+            opts="-h --color --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -774,7 +774,7 @@ _trk() {
             return 0
             ;;
         trk__subcmd__then)
-            opts="-p -w -h --pick --why --no-why --color --help"
+            opts="-s -w -h --switch --why --no-why --color --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -818,7 +818,7 @@ _trk() {
             return 0
             ;;
         trk__subcmd__why)
-            opts="-p -h --pick --color --help"
+            opts="-s -h --switch --color --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0

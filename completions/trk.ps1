@@ -27,9 +27,9 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('-V', '-V ', [CompletionResultType]::ParameterName, 'Print version')
             [CompletionResult]::new('--version', '--version', [CompletionResultType]::ParameterName, 'Print version')
             [CompletionResult]::new('need', 'need', [CompletionResultType]::ParameterValue, 'What am I doing, and why')
-            [CompletionResult]::new('also', 'also', [CompletionResultType]::ParameterValue, 'Also, this other thing (a new top-level task)')
-            [CompletionResult]::new('then', 'then', [CompletionResultType]::ParameterValue, 'Once this is done, then that (a new parent above the target)')
-            [CompletionResult]::new('add', 'add', [CompletionResultType]::ParameterValue, 'A sibling of the target, right after it')
+            [CompletionResult]::new('by', 'by', [CompletionResultType]::ParameterValue, 'Goal by X: a direct task under the active goal')
+            [CompletionResult]::new('then', 'then', [CompletionResultType]::ParameterValue, 'Once this is done, then X: wrap the current chain in a new parent')
+            [CompletionResult]::new('and', 'and', [CompletionResultType]::ParameterValue, 'And X: another task at the same level as the target')
             [CompletionResult]::new('done', 'done', [CompletionResultType]::ParameterValue, 'Finish the current task and walk back up')
             [CompletionResult]::new('drop', 'drop', [CompletionResultType]::ParameterValue, 'Abandon the current task')
             [CompletionResult]::new('stop', 'stop', [CompletionResultType]::ParameterValue, 'Leave the current task unfinished, with a reason')
@@ -37,7 +37,7 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('why', 'why', [CompletionResultType]::ParameterValue, 'Chain of notes from the root to the current task')
             [CompletionResult]::new('note', 'note', [CompletionResultType]::ParameterValue, 'Read or add note lines on a task')
             [CompletionResult]::new('rename', 'rename', [CompletionResultType]::ParameterValue, 'Change a task''s text')
-            [CompletionResult]::new('pick', 'pick', [CompletionResultType]::ParameterValue, 'Choose the current task')
+            [CompletionResult]::new('switch', 'switch', [CompletionResultType]::ParameterValue, 'Switch to another task')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'The whole task tree of the active goal')
             [CompletionResult]::new('undo', 'undo', [CompletionResultType]::ParameterValue, 'Undo the last N changes')
             [CompletionResult]::new('goal', 'goal', [CompletionResultType]::ParameterValue, 'Goals: show, list, new, switch, done, rename, reopen')
@@ -56,8 +56,8 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'Supply the why inline (skips the prompt)')
             [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'Supply the why inline (skips the prompt)')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 'Pick the target task instead of using the current task')
-            [CompletionResult]::new('--pick', '--pick', [CompletionResultType]::ParameterName, 'Pick the target task instead of using the current task')
+            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 'Switch to choose the target task instead of using the current task')
+            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'Switch to choose the target task instead of using the current task')
             [CompletionResult]::new('-n', '-n', [CompletionResultType]::ParameterName, 'Do not move the cursor onto the new task')
             [CompletionResult]::new('--stay', '--stay', [CompletionResultType]::ParameterName, 'Do not move the cursor onto the new task')
             [CompletionResult]::new('--no-why', '--no-why', [CompletionResultType]::ParameterName, 'Do not ask for a why')
@@ -65,7 +65,7 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
-        'trk;also' {
+        'trk;by' {
             [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'w')
             [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'why')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
@@ -78,19 +78,19 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'w')
             [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'why')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 'p')
-            [CompletionResult]::new('--pick', '--pick', [CompletionResultType]::ParameterName, 'pick')
+            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
+            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
             [CompletionResult]::new('--no-why', '--no-why', [CompletionResultType]::ParameterName, 'no-why')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
-        'trk;add' {
+        'trk;and' {
             [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'w')
             [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'why')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 'p')
-            [CompletionResult]::new('--pick', '--pick', [CompletionResultType]::ParameterName, 'pick')
+            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
+            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
             [CompletionResult]::new('--no-why', '--no-why', [CompletionResultType]::ParameterName, 'no-why')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
@@ -116,8 +116,8 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
         }
         'trk;stop' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 'p')
-            [CompletionResult]::new('--pick', '--pick', [CompletionResultType]::ParameterName, 'pick')
+            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
+            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
@@ -130,8 +130,8 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
         }
         'trk;why' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 'p')
-            [CompletionResult]::new('--pick', '--pick', [CompletionResultType]::ParameterName, 'pick')
+            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
+            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
@@ -142,21 +142,21 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-c', '-c', [CompletionResultType]::ParameterName, 'c')
             [CompletionResult]::new('--clear', '--clear', [CompletionResultType]::ParameterName, 'clear')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 'p')
-            [CompletionResult]::new('--pick', '--pick', [CompletionResultType]::ParameterName, 'pick')
+            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
+            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
         'trk;rename' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 'p')
-            [CompletionResult]::new('--pick', '--pick', [CompletionResultType]::ParameterName, 'pick')
+            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
+            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
-        'trk;pick' {
+        'trk;switch' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
@@ -254,10 +254,10 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('--goal', '--goal', [CompletionResultType]::ParameterName, 'goal')
             [CompletionResult]::new('--new-goal', '--new-goal', [CompletionResultType]::ParameterName, 'new-goal')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 'p')
-            [CompletionResult]::new('--pick', '--pick', [CompletionResultType]::ParameterName, 'pick')
-            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
+            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 'Switch to choose the parent task instead of making a root')
+            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'Switch to choose the parent task instead of making a root')
+            [CompletionResult]::new('-a', '-a', [CompletionResultType]::ParameterName, 'Make the chosen goal active')
+            [CompletionResult]::new('--activate', '--activate', [CompletionResultType]::ParameterName, 'Make the chosen goal active')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
@@ -276,8 +276,8 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
         }
         'trk;at' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 'p')
-            [CompletionResult]::new('--pick', '--pick', [CompletionResultType]::ParameterName, 'pick')
+            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
+            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
             [CompletionResult]::new('--clear', '--clear', [CompletionResultType]::ParameterName, 'Remove the schedule')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')

@@ -21,9 +21,9 @@ fn status_matches_spec_7_1() {
     let got = render(views::status_view(&doc, 80, Style::new(false, true)));
     let expected = "\
 Ship login fix
-  Fix login bug
-    Reproduce on staging
-      Document the process
+  Document the process
+    Fix login bug
+      Reproduce on staging
         > Get staging creds
           why: can't log in";
     assert_eq!(got, expected);
@@ -41,11 +41,11 @@ fn list_matches_spec_7_2() {
     ));
     let expected = "\
 Ship login fix
- 1  Fix login bug
- 2    Reproduce on staging
- 3      Document the process
+ 1  Document the process
+ 2    Fix login bug
+ 3      Reproduce on staging
  4        > Get staging creds
- 5    Check auth logs
+ 5      Check auth logs
  6  Call internet company";
     assert_eq!(got, expected);
 }
@@ -56,12 +56,12 @@ fn why_matches_spec_7_3() {
     let got = render(views::why_view(&doc, 80, Style::new(false, true)));
     let expected = "\
 Ship login fix
-  Fix login bug
-    why: customers locked out
-    Reproduce on staging
-      why: need a failing case
-      Document the process
-        why: after the fix ships
+  Document the process
+    why: after the fix ships
+    Fix login bug
+      why: customers locked out
+      Reproduce on staging
+        why: need a failing case
         > Get staging creds
           why: can't log in";
     assert_eq!(got, expected);

@@ -22,7 +22,7 @@ shifted characters, and becomes muscle memory within days. Typing cost is a
 first-class design constraint, and it applies to every command:
 
 - Commands are short, lowercase, plain words that read like thoughts
-  (`need`, `then`, `also`, `done`).
+  (`need`, `by`, `and`, `then`, `done`).
 - No command requires quoting. Free text is taken from the remaining arguments
   as typed.
 - No command requires a shifted symbol or an awkward key combination.
@@ -31,13 +31,15 @@ first-class design constraint, and it applies to every command:
 
 ## Core idea
 
-Work is a tree of tasks under a goal. One task is the current task. Four moves
+Work is a tree of tasks under a goal. One task is the current task. Five moves
 cover almost everything that happens mid-work:
 
-1. "I need X to finish this." A child of the current task; you descend.
-2. "Also, X." An unrelated top-level task; you stay where you are.
-3. "Then, once this is done, X." A new parent above a task; you stay.
-4. "Task T needs X." A child of some other task T; you stay.
+1. "I need X to finish this." A child of the current task; you descend. (`need`)
+2. "Also, X." An unrelated top-level task; you stay. (`by`)
+3. "And, X." Another task at the same level as the current one. (`and`)
+4. "Then, once this is done, X." A new parent that wraps the current chain; you
+   stay. (`then`)
+5. "Task T needs X." A child of some other task T; you stay. (`need -s`)
 
 A fifth action, finishing, walks you back up the chain and tells you where you
 are and why.
@@ -131,7 +133,7 @@ prompts, or create the config file by hand (see [Configuration](#configuration))
 
 ```sh
 trk goal new "Ship login fix"     # start a goal
-trk also "Fix login bug"          # add a top-level task
+trk by "Fix login bug"            # add a top-level task
 trk need "Reproduce on staging"   # descend into what this needs
 trk                               # what am I doing, and why?
 trk done                          # finish and walk back up
@@ -152,21 +154,21 @@ $ trk goal new Ship login fix
 goal: Ship login fix
 Ship login fix
 no current task
-try: trk goal done or trk also <task>
+try: trk goal done or trk by <task>
 ```
 
 **The first task.** The first concrete thing is the bug itself. It is top
-level, so I use `also`, not `need`:
+level, so I use `by`, not `need`:
 
 ```sh
-$ trk also Fix login bug -w "customers locked out"
+$ trk by Fix login bug -w "customers locked out"
 added: Fix login bug
 Ship login fix
   > Fix login bug
       why: customers locked out
 ```
 
-The empty-cursor rule made this task current even though `also` normally stays
+The empty-cursor rule made this task current even though `by` normally stays
 put. The `-w` flag recorded the why inline; without it, `trk` would have asked
 `why?`.
 
@@ -187,7 +189,7 @@ failing case, to fix the login bug, because customers are locked out.
 company. That is not part of the login fix; it is a separate top-level task:
 
 ```sh
-$ trk also Call internet company -w "wifi flaky"
+$ trk by Call internet company -w "wifi flaky"
 added: Call internet company
 ```
 
@@ -196,17 +198,17 @@ I had used `need`, it would have been buried under the current task, which would
 be wrong.
 
 **A sibling.** I realize I should also check the auth logs, and that belongs at
-the same level as "Reproduce on staging", not underneath it. `add` puts a task
+the same level as "Reproduce on staging", not underneath it. `and` puts a task
 right after a target:
 
 ```sh
-$ trk add Check auth logs -w "might explain the 401s"
+$ trk and Check auth logs -w "might explain the 401s"
 ```
 
-If I want to add it under a different task instead, I can target one with `-p`:
+If I want to add it under a different task instead, I can target one with `-s`:
 
 ```sh
-$ trk need -p Check auth logs        # opens a picker of tasks to parent under
+$ trk need -s Check auth logs        # opens a picker of tasks to parent under
 ```
 
 **A whole new goal, mid-work.** While debugging, the release manager pings me
@@ -215,14 +217,14 @@ new goal and switch to it:
 
 ```sh
 $ trk goal new Release 1.4 -w
-$ trk also Tag the release -w "blocked on QA"
+$ trk by Tag the release -w "blocked on QA"
 ```
 
 `goal new` makes the new goal active. When I am done there, I switch back and I
 am exactly where I was, because each goal keeps its own cursor:
 
 ```sh
-$ trk goal switch "Ship login fix"
+$ trk goal switch 1
 Ship login fix
   Fix login bug
     Reproduce on staging
@@ -234,20 +236,22 @@ Use `trk goal new -n` (or `--stay`) if you want to create a goal without
 switching to it, and `trk goal list` to see your goals.
 
 **Reframing the work.** I realize the credential step sits inside a
-documentation step that happens after shipping. `then` inserts a new parent
-above the target:
+documentation step that happens after shipping. `then` wraps the whole current
+chain in a new parent:
 
 ```sh
 $ trk then Document the process -w "after the fix ships"
 Ship login fix
-  Fix login bug
-    Reproduce on staging
-      Document the process
+  Document the process
+    Fix login bug
+      Reproduce on staging
         > Get staging creds
           why: can't log in
 ```
 
-My place is unchanged, but it now sits inside a larger, correct frame.
+My place is unchanged, but it now sits inside a larger, correct frame. Each
+further `then` wraps the chain again, so I can keep adding later steps while I
+stay on the first one.
 
 **Blocked, then resumed.** I am waiting on a registrar, so I stop the task with
 a reason instead of pretending it is done:
@@ -270,8 +274,8 @@ and moves me to the nearest thing that still needs me, telling me why:
 
 ```sh
 $ trk done
-back to: Document the process
-  why: after the fix ships
+back to: Reproduce on staging
+  why: need a failing case
 ```
 
 If a sibling still needed me it would have said `next:` and named it; if I
@@ -279,19 +283,19 @@ finished the last top-level task it would say `next top-level task:` or report
 that the goal has no open tasks. Finishing a parent that still has open children
 is blocked with exit code 3 until you pass `--force`.
 
-**Jumping around.** `trk list` prints the tree with numbers, and `trk pick N`
+**Jumping around.** `trk list` prints the tree with numbers, and `trk switch N`
 jumps to one:
 
 ```sh
 $ trk list
 Ship login fix
- 1  Fix login bug
- 2    Reproduce on staging
- 3      Document the process
+ 1  Document the process
+ 2    Fix login bug
+ 3      Reproduce on staging
  4        > Get staging creds
- 5    Check auth logs
+ 5      Check auth logs
  6  Call internet company
-$ trk pick 6
+$ trk switch 6
 ```
 
 **A mistake.** I finished the wrong task:
@@ -341,9 +345,9 @@ goal done: Ship login fix
 |---|---|
 | `trk` | what am I doing, and why |
 | `trk need <text>` | new child of current task; descend |
-| `trk also <text>` | new top-level task; stay |
-| `trk then <text>` | new parent above target; stay |
-| `trk add <text>` | new sibling after target; stay |
+| `trk by <text>` | new top-level task; stay |
+| `trk then <text>` | new parent wrapping the current chain; stay |
+| `trk and <text>` | new sibling after target; stay |
 | `trk done` | finish current; walk back up |
 | `trk drop` | abandon current (reversible) |
 | `trk stop [reason]` | leave current unfinished, record why |
@@ -351,7 +355,7 @@ goal done: Ship login fix
 | `trk why` | chain of notes from the root to the current task |
 | `trk note [text]` | read or add note lines on a task |
 | `trk rename <text>` | change a task's text |
-| `trk pick [N]` | choose the current task |
+| `trk switch [N]` | choose the current task |
 | `trk list` | the whole task tree of the active goal |
 | `trk undo [N]` | undo the last N changes |
 | `trk goal ...` | show, list, new, switch, done, rename, reopen |
@@ -365,12 +369,12 @@ goal done: Ship login fix
 | `trk prompt` | one short line for a shell prompt |
 | `trk completions <shell>` | print a shell completion script |
 
-Aliases: `d` done, `u` undo, `l` list, `n` note, `w` why, `p` pick, `s` stop,
-`g` goal, `i` inbox.
+Aliases: `d` done, `u` undo, `l` list, `n` note, `w` why, `s` stop, `g` goal,
+`i` inbox.
 
-Useful flags: `-p/--pick` chooses a target in a picker; `-w <why>` supplies the
-why inline; `-n/--stay` keeps the cursor put; `-f/--force` overrides a blocked
-`done`/`drop`/`goal done`; `--no-why` skips the why prompt.
+Useful flags: `-s/--switch` chooses a target in a picker; `-w <why>` supplies
+the why inline; `-n/--stay` keeps the cursor put; `-f/--force` overrides a
+blocked `done`/`drop`/`goal done`; `--no-why` skips the why prompt.
 
 Run `trk <command> --help` for the full option list, or see `man trk` for the
 complete usage book.

@@ -34,14 +34,14 @@ Print version
 trk\-need(1)
 What am I doing, and why
 .TP
-trk\-also(1)
-Also, this other thing (a new top\-level task)
+trk\-by(1)
+Goal by X: a direct task under the active goal
 .TP
 trk\-then(1)
-Once this is done, then that (a new parent above the target)
+Once this is done, then X: wrap the current chain in a new parent
 .TP
-trk\-add(1)
-A sibling of the target, right after it
+trk\-and(1)
+And X: another task at the same level as the target
 .TP
 trk\-done(1)
 Finish the current task and walk back up
@@ -64,8 +64,8 @@ Read or add note lines on a task
 trk\-rename(1)
 Change a task\*(Aqs text
 .TP
-trk\-pick(1)
-Choose the current task
+trk\-switch(1)
+Switch to another task
 .TP
 trk\-list(1)
 The whole task tree of the active goal

@@ -63,7 +63,7 @@ impl Ui for TerminalUi {
 
     fn pick(&mut self, spec: &PickSpec) -> Result<PickResult, TrkError> {
         if spec.rows.is_empty() {
-            return Err(TrkError::Message("nothing to pick".into()));
+            return Err(TrkError::Message("nothing to switch to".into()));
         }
         crate::tui::picker::run(spec, self.style)
     }

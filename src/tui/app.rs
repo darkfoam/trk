@@ -222,7 +222,7 @@ impl<'a> App<'a> {
                 self.apply(
                     "done",
                     vec![
-                        Request::Pick {
+                        Request::Switch {
                             target: Target::Task(id),
                         },
                         Request::Done { force: false },
@@ -258,8 +258,8 @@ impl<'a> App<'a> {
             KeyCode::Enter => {
                 let id = self.highlight;
                 self.apply(
-                    "pick",
-                    vec![Request::Pick {
+                    "switch",
+                    vec![Request::Switch {
                         target: Target::Task(id),
                     }],
                 )?;
@@ -468,7 +468,7 @@ impl<'a> App<'a> {
     fn render_tasks(&self, frame: &mut ratatui::Frame, area: ratatui::layout::Rect) {
         let mut lines: Vec<Line> = Vec::new();
         let Some(goal) = self.doc.active_goal() else {
-            lines.push(Line::from("no goal yet. :also <task>"));
+            lines.push(Line::from("no goal yet. :by <task>"));
             frame.render_widget(Paragraph::new(lines), area);
             return;
         };
@@ -501,7 +501,7 @@ impl<'a> App<'a> {
             }
         }
         if lines.is_empty() {
-            lines.push(Line::from("no tasks yet. :also <task>"));
+            lines.push(Line::from("no tasks yet. :by <task>"));
         }
         frame.render_widget(
             Paragraph::new(lines).block(Block::default().borders(Borders::NONE)),
@@ -562,14 +562,14 @@ impl<'a> App<'a> {
             }
             Mode::Help => {
                 frame.render_widget(
-                    Paragraph::new("j/k move  enter pick  d done  s stop  g go  n note  u undo  : cmd  tab focus  w why  r reload  q quit"),
+                    Paragraph::new("j/k move  enter switch  d done  s stop  g go  n note  u undo  : cmd  tab focus  w why  r reload  q quit"),
                     area,
                 );
             }
             Mode::Normal => {
                 frame.render_widget(
                     Paragraph::new(
-                        "j/k move  \u{23ce} pick  d done  s stop  n note  : cmd  ? help  q quit",
+                        "j/k move  \u{23ce} switch  d done  s stop  n note  : cmd  ? help  q quit",
                     ),
                     area,
                 );
@@ -581,7 +581,7 @@ impl<'a> App<'a> {
 fn command_to_requests(command: Command) -> Result<Vec<Request>, String> {
     let join = |words: &[String]| words.join(" ");
     let req = match command {
-        Command::Also(a) => Request::Also {
+        Command::By(a) => Request::By {
             text: join(&a.text),
             why: a.why,
         },
@@ -596,7 +596,7 @@ fn command_to_requests(command: Command) -> Result<Vec<Request>, String> {
             why: a.why,
             target: Target::Current,
         },
-        Command::Add(a) => Request::Add {
+        Command::And(a) => Request::And {
             text: join(&a.text),
             why: a.why,
             target: Target::Current,
