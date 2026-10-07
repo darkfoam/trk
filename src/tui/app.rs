@@ -597,7 +597,7 @@ fn command_to_requests(command: Command) -> Result<Vec<Request>, String> {
             text: join(&a.text),
             why: a.why,
         },
-        Command::Need(a) => Request::Need {
+        Command::Add(a) => Request::Add {
             text: join(&a.text),
             why: a.why,
             target: Target::Current,

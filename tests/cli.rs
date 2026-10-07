@@ -43,15 +43,15 @@ fn build_main_scenario(env: &Env) {
     env.run(&["goal", "new", "Ship login fix"]).success();
     env.run(&["by", "Fix login bug", "-w", "customers locked out"])
         .success();
-    env.run(&["need", "Reproduce on staging", "-w", "need a failing case"])
+    env.run(&["add", "Reproduce on staging", "-w", "need a failing case"])
         .success();
-    env.run(&["need", "Get staging creds", "-w", "can't log in"])
+    env.run(&["add", "Get staging creds", "-w", "can't log in"])
         .success();
     env.run(&["by", "Call internet company", "-w", "wifi flaky"])
         .success();
     env.run(&["switch", "1"]).success();
     env.run(&[
-        "need",
+        "add",
         "-n",
         "Check auth logs",
         "-w",
@@ -143,7 +143,7 @@ fn non_tty_need_creates_task_without_prompt() {
     env.run(&["goal", "new", "G"]).success();
     let mut cmd = env.cmd();
     cmd.write_stdin("")
-        .args(["need", "do the thing"])
+        .args(["add", "do the thing"])
         .assert()
         .success()
         .stdout(predicate::str::contains("do the thing"));

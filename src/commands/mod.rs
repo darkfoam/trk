@@ -413,17 +413,17 @@ fn join_text(words: &[String]) -> String {
 
 fn run(ctx: &Ctx, ui: &mut dyn Ui, command: Command) -> Result<i32, TrkError> {
     match command {
-        Command::Need(args) => {
+        Command::Add(args) => {
             let text = join_text(&args.text);
             if text.trim().is_empty() {
-                return Err(TrkError::Usage("need: give the task text".into()));
+                return Err(TrkError::Usage("add: give the task text".into()));
             }
-            let target = resolved_target(ctx, ui, args.switch, "which task needs this?")?;
+            let target = resolved_target(ctx, ui, args.switch, "add under which task?")?;
             let why = resolve_why(ctx, ui, args.why, args.no_why)?;
             mutate(
                 ctx,
-                "need",
-                &Request::Need {
+                "add",
+                &Request::Add {
                     text,
                     why,
                     target,

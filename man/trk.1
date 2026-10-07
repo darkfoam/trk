@@ -12,7 +12,7 @@ trk \- adhd compliant task tracking
 .BR auto | always | never ]
 .PP
 .B trk
-.B need
+.B add
 .RI [ \-s ]
 .RI [ \-n ]
 .RI [ \-w
@@ -268,7 +268,7 @@ Four moves cover almost everything that happens mid\-work:
 .IP "1." 3
 "I need X to finish this." Create a child of the current task, and descend into
 it. Use
-.BR "trk need X" .
+.BR "trk add X" .
 .IP "2." 3
 "Also, X." Create an unrelated top\-level task; you stay where you are. Use
 .BR "trk by X" .
@@ -280,7 +280,7 @@ Use
 .BR "trk then X" .
 .IP "4." 3
 "Task T needs X." Create a child of some other task T; you stay. Use
-.B "trk need \-s X"
+.B "trk add \-s X"
 and switch to T, or move to T first.
 .PP
 A fifth action, finishing, walks you back up the chain and tells you where you
@@ -384,9 +384,9 @@ I have been heads\-down for twenty minutes and I have lost the thread. I type
 .B trk
 and immediately see the chain of reasons that led me here. I do not have to
 remember anything; the tree remembers for me.
-.SS trk need
+.SS trk add
 .nf
-trk need [\-s] [\-n] [\-w why] [\-\-no\-why] text ...
+trk add [\-s] [\-n] [\-w why] [\-\-no\-why] text ...
 .fi
 .PP
 "I need this to finish what I am doing." Creates a new open task and appends it
@@ -397,6 +397,8 @@ capturing a rabbit hole.
 .B \-s, \-\-switch
 Choose the parent task in a picker instead of using the current task. The
 cursor does not move.
+.B \-p
+is accepted as a short alias.
 .TP
 .B \-n, \-\-stay
 Do not move the cursor onto the new task. Useful when you are recording a
@@ -413,7 +415,7 @@ the current task, whatever the other options say.
 .PP
 .RS 4
 .nf
-$ trk need Reproduce on staging \-w "need a failing case"
+$ trk add Reproduce on staging \-w "need a failing case"
 Ship login fix
   Fix login bug
     > Reproduce on staging
@@ -424,7 +426,7 @@ Ship login fix
 .I "Thought process:"
 I am fixing a login bug and realize I cannot fix it until I can see it fail. I
 type
-.B trk need Reproduce on staging
+.B trk add Reproduce on staging
 and answer the why prompt with
 .BR "need a failing case" .
 Now the task I am on is "Reproduce on staging", and the reason it exists is
@@ -461,7 +463,7 @@ It is not part of fixing the login bug; it is a separate top\-level task. I type
 .B trk by
 so it lands at the top level and I stay exactly where I was, on the login bug.
 If I had typed
-.BR need ,
+.BR add ,
 I would have buried it under the current task, which would be wrong.
 .SS trk then
 .nf
@@ -1246,7 +1248,7 @@ or Ctrl\-C quits.
 .PP
 The view polls the store and reloads automatically when another terminal
 changes it, so running
-.B trk need
+.B trk add
 in your main pane is reflected in the pane running
 .B trk start
 within about half a second. The terminal is restored on every exit path,
@@ -1400,7 +1402,7 @@ move is to add a task.
 The first concrete thing is the bug itself. It is top level, so I use
 .BR by ,
 not
-.BR need .
+.BR add .
 .RS 4
 .nf
 $ trk by Fix login bug \-w "customers locked out"
@@ -1418,7 +1420,7 @@ normally stays put.
 I cannot fix what I cannot see, so I descend.
 .RS 4
 .nf
-$ trk need Reproduce on staging \-w "need a failing case"
+$ trk add Reproduce on staging \-w "need a failing case"
 Ship login fix
   Fix login bug
     > Reproduce on staging
@@ -1433,7 +1435,7 @@ customers are locked out.
 Reproducing needs access.
 .RS 4
 .nf
-$ trk need Get staging creds \-w "can't log in"
+$ trk add Get staging creds \-w "can't log in"
 Ship login fix
   Fix login bug
     Reproduce on staging
@@ -1466,7 +1468,7 @@ $ trk switch 1
 Ship login fix
   > Fix login bug
       why: customers locked out
-$ trk need \-n Check auth logs \-w "might explain the 401s"
+$ trk add \-n Check auth logs \-w "might explain the 401s"
 $ trk switch 3
 .fi
 .RE

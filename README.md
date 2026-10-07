@@ -22,7 +22,7 @@ shifted characters, and becomes muscle memory within days. Typing cost is a
 first-class design constraint, and it applies to every command:
 
 - Commands are short, lowercase, plain words that read like thoughts
-  (`need`, `by`, `and`, `then`, `done`).
+  (`add`, `by`, `and`, `then`, `done`).
 - No command requires quoting. Free text is taken from the remaining arguments
   as typed.
 - No command requires a shifted symbol or an awkward key combination.
@@ -34,12 +34,12 @@ first-class design constraint, and it applies to every command:
 Work is a tree of tasks under a goal. One task is the current task. Five moves
 cover almost everything that happens mid-work:
 
-1. "I need X to finish this." A child of the current task; you descend. (`need`)
+1. "I need X to finish this." A child of the current task; you descend. (`add`)
 2. "Also, X." An unrelated top-level task; you stay. (`by`)
 3. "And, X." Another task at the same level as the current one. (`and`)
 4. "Then, once this is done, X." A new parent that wraps the current chain; you
    stay. (`then`)
-5. "Task T needs X." A child of some other task T; you stay. (`need -s`)
+5. "Task T needs X." A child of some other task T; you stay. (`add -s`)
 
 A fifth action, finishing, walks you back up the chain and tells you where you
 are and why.
@@ -134,7 +134,7 @@ prompts, or create the config file by hand (see [Configuration](#configuration))
 ```sh
 trk goal new "Ship login fix"     # start a goal
 trk by "Fix login bug"            # add a top-level task
-trk need "Reproduce on staging"   # descend into what this needs
+trk add "Reproduce on staging"   # descend into what this needs
 trk                               # what am I doing, and why?
 trk done                          # finish and walk back up
 trk start                         # live list in a terminal pane
@@ -158,7 +158,7 @@ try: trk goal done or trk by <task>
 ```
 
 **The first task.** The first concrete thing is the bug itself. It is top
-level, so I use `by`, not `need`:
+level, so I use `by`, not `add`:
 
 ```sh
 $ trk by Fix login bug -w "customers locked out"
@@ -175,7 +175,7 @@ put. The `-w` flag recorded the why inline; without it, `trk` would have asked
 **A prerequisite.** I cannot fix what I cannot see, so I descend:
 
 ```sh
-$ trk need Reproduce on staging -w "need a failing case"
+$ trk add Reproduce on staging -w "need a failing case"
 Ship login fix
   Fix login bug
     > Reproduce on staging
@@ -194,7 +194,7 @@ added: Call internet company
 ```
 
 My cursor did not move. The interruption was captured without derailing me. If
-I had used `need`, it would have been buried under the current task, which would
+I had used `add`, it would have been buried under the current task, which would
 be wrong.
 
 **A sibling.** I realize I should also check the auth logs, and that belongs at
@@ -208,7 +208,7 @@ $ trk and Check auth logs -w "might explain the 401s"
 If I want to add it under a different task instead, I can target one with `-s`:
 
 ```sh
-$ trk need -s Check auth logs        # opens a picker of tasks to parent under
+$ trk add -s Check auth logs        # opens a picker of tasks to parent under
 ```
 
 **A whole new goal, mid-work.** While debugging, the release manager pings me
@@ -344,7 +344,7 @@ goal done: Ship login fix
 | Command | What it does |
 |---|---|
 | `trk` | what am I doing, and why |
-| `trk need <text>` | new child of current task; descend |
+| `trk add <text>` | new child of current task; descend |
 | `trk by <text>` | new top-level task; stay |
 | `trk then <text>` | new parent wrapping the current chain; stay |
 | `trk and <text>` | new sibling after target; stay |

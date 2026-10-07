@@ -47,8 +47,8 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    /// What am I doing, and why.
-    Need(NeedArgs),
+    /// Add X: a new task under the current task; you descend.
+    Add(AddArgs),
     /// Goal by X: a direct task under the active goal.
     By(ByArgs),
     /// Once this is done, then X: wrap the current chain in a new parent.
@@ -106,11 +106,11 @@ pub enum Command {
 }
 
 #[derive(clap::Args, Debug)]
-pub struct NeedArgs {
+pub struct AddArgs {
     #[arg(value_name = "TEXT")]
     pub text: Vec<String>,
-    /// Switch to choose the target task instead of using the current task.
-    #[arg(short = 's', long)]
+    /// Switch to choose the parent task instead of using the current task.
+    #[arg(short = 's', visible_short_alias = 'p', long)]
     pub switch: bool,
     /// Do not move the cursor onto the new task.
     #[arg(short = 'n', long)]
@@ -137,7 +137,7 @@ pub struct ByArgs {
 pub struct ThenArgs {
     #[arg(value_name = "TEXT")]
     pub text: Vec<String>,
-    #[arg(short = 's', long)]
+    #[arg(short = 's', visible_short_alias = 'p', long)]
     pub switch: bool,
     #[arg(short = 'w', long, value_name = "WHY")]
     pub why: Option<String>,
@@ -149,7 +149,7 @@ pub struct ThenArgs {
 pub struct AndArgs {
     #[arg(value_name = "TEXT")]
     pub text: Vec<String>,
-    #[arg(short = 's', long)]
+    #[arg(short = 's', visible_short_alias = 'p', long)]
     pub switch: bool,
     #[arg(short = 'w', long, value_name = "WHY")]
     pub why: Option<String>,
@@ -176,13 +176,13 @@ pub struct DropArgs {
 pub struct StopArgs {
     #[arg(value_name = "REASON")]
     pub reason: Vec<String>,
-    #[arg(short = 's', long)]
+    #[arg(short = 's', visible_short_alias = 'p', long)]
     pub switch: bool,
 }
 
 #[derive(clap::Args, Debug)]
 pub struct WhyArgs {
-    #[arg(short = 's', long)]
+    #[arg(short = 's', visible_short_alias = 'p', long)]
     pub switch: bool,
 }
 
@@ -194,7 +194,7 @@ pub struct NoteArgs {
     pub replace: Option<String>,
     #[arg(short = 'c', long)]
     pub clear: bool,
-    #[arg(short = 's', long)]
+    #[arg(short = 's', visible_short_alias = 'p', long)]
     pub switch: bool,
 }
 
@@ -202,7 +202,7 @@ pub struct NoteArgs {
 pub struct RenameArgs {
     #[arg(value_name = "TEXT")]
     pub text: Vec<String>,
-    #[arg(short = 's', long)]
+    #[arg(short = 's', visible_short_alias = 'p', long)]
     pub switch: bool,
 }
 
@@ -311,7 +311,7 @@ pub struct InboxTakeArgs {
     #[arg(long, value_name = "TITLE")]
     pub new_goal: Option<String>,
     /// Switch to choose the parent task instead of making a root.
-    #[arg(short = 's', long)]
+    #[arg(short = 's', visible_short_alias = 'p', long)]
     pub switch: bool,
     /// Make the chosen goal active.
     #[arg(short = 'a', long)]
@@ -334,7 +334,7 @@ pub struct LogArgs {
 pub struct AtArgs {
     #[arg(value_name = "WHEN")]
     pub when: Vec<String>,
-    #[arg(short = 's', long)]
+    #[arg(short = 's', visible_short_alias = 'p', long)]
     pub switch: bool,
     /// Remove the schedule.
     #[arg(long)]

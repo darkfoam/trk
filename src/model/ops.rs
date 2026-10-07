@@ -11,7 +11,7 @@ pub enum Target {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Request {
-    Need {
+    Add {
         text: String,
         why: Option<String>,
         target: Target,
@@ -186,12 +186,12 @@ pub fn apply(
 ) -> Result<(Doc, Outcome), OpError> {
     let mut doc = doc.clone();
     let outcome = match req {
-        Request::Need {
+        Request::Add {
             text,
             why,
             target,
             stay,
-        } => op_need(&mut doc, text, why, target, *stay, now)?,
+        } => op_add(&mut doc, text, why, target, *stay, now)?,
         Request::By { text, why } => op_by(&mut doc, text, why, now)?,
         Request::Then { text, why, target } => op_then(&mut doc, text, why, target, now)?,
         Request::And { text, why, target } => op_and(&mut doc, text, why, target, now)?,
@@ -287,7 +287,7 @@ fn push_why_message(messages: &mut Vec<Message>, goal: &Goal, id: TaskId) {
     }
 }
 
-fn op_need(
+fn op_add(
     doc: &mut Doc,
     text: &str,
     why: &Option<String>,

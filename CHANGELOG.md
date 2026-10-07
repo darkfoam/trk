@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Changed
 
+- Renamed the `need` command to `add`: it adds a new task under the current
+  task (or, with `-s`, a picked one) and descends onto it. The target-selection
+  flag `-s/--switch` also accepts `-p` as a short alias.
 - CI runs tests only on merges to `main`; the release build runs only after the
   tests pass, and no longer runs on pull requests or feature-branch pushes.
 - Releases now publish the matching `CHANGELOG.md` section as the release body
