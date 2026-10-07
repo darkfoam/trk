@@ -67,8 +67,12 @@ fn build_main_scenario(env: &Env) {
 fn main_scenario_steps_1_to_7_produce_golden_fixture() {
     let env = Env::new();
     build_main_scenario(&env);
-    let text = fs::read_to_string(env.store()).unwrap();
-    let golden = std::fs::read_to_string("tests/fixtures/step7.trk").unwrap();
+    let text = fs::read_to_string(env.store())
+        .unwrap()
+        .replace("\r\n", "\n");
+    let golden = std::fs::read_to_string("tests/fixtures/step7.trk")
+        .unwrap()
+        .replace("\r\n", "\n");
     assert_eq!(text, golden);
 }
 

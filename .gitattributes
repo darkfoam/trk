@@ -1,0 +1,5 @@
+# Keep the parser fixtures LF so tests behave the same on every platform.
+tests/fixtures/*.trk text eol=lf
+# The store format and man page are LF by definition.
+*.trk text eol=lf
+man/*.1 text eol=lf

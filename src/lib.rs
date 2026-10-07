@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-//! `trk`: adhd compliant task tracking. See `INSTRUCTIONS.md` for the spec.
+//! `trk`: adhd compliant task tracking.
 
 pub mod cli;
 pub mod clock;
