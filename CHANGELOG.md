@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-07
+
 ### Added
 
 - `current_color` config key selecting the color of the current task (default
@@ -59,6 +61,7 @@ and this project adheres to
   agenda, the log, pickers, the `trk start` TUI, undo, shell completions, and
   the man page.
 
-[Unreleased]: https://github.com/darkfoam/trk/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/darkfoam/trk/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/darkfoam/trk/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/darkfoam/trk/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/darkfoam/trk/releases/tag/v0.1.0
