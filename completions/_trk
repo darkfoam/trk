@@ -1,0 +1,617 @@
+#compdef trk
+
+autoload -U is-at-least
+
+_trk() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+'-V[Print version]' \
+'--version[Print version]' \
+":: :_trk_commands" \
+"*::: :->trk" \
+&& ret=0
+    case $state in
+    (trk)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:trk-command-$line[1]:"
+        case $line[1] in
+            (need)
+_arguments "${_arguments_options[@]}" : \
+'-w+[Supply the why inline (skips the prompt)]:WHY:_default' \
+'--why=[Supply the why inline (skips the prompt)]:WHY:_default' \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-p[Pick the target task instead of using the current task]' \
+'--pick[Pick the target task instead of using the current task]' \
+'-n[Do not move the cursor onto the new task]' \
+'--stay[Do not move the cursor onto the new task]' \
+'--no-why[Do not ask for a why]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::text:_default' \
+&& ret=0
+;;
+(also)
+_arguments "${_arguments_options[@]}" : \
+'-w+[]:WHY:_default' \
+'--why=[]:WHY:_default' \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'--no-why[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::text:_default' \
+&& ret=0
+;;
+(then)
+_arguments "${_arguments_options[@]}" : \
+'-w+[]:WHY:_default' \
+'--why=[]:WHY:_default' \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-p[]' \
+'--pick[]' \
+'--no-why[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::text:_default' \
+&& ret=0
+;;
+(add)
+_arguments "${_arguments_options[@]}" : \
+'-w+[]:WHY:_default' \
+'--why=[]:WHY:_default' \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-p[]' \
+'--pick[]' \
+'--no-why[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::text:_default' \
+&& ret=0
+;;
+(done)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-f[Finish even if the task has open sub-tasks]' \
+'--force[Finish even if the task has open sub-tasks]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(drop)
+_arguments "${_arguments_options[@]}" : \
+'-w+[]:WHY:_default' \
+'--why=[]:WHY:_default' \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-f[]' \
+'--force[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(stop)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-p[]' \
+'--pick[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::reason:_default' \
+&& ret=0
+;;
+(go)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(why)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-p[]' \
+'--pick[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(note)
+_arguments "${_arguments_options[@]}" : \
+'-r+[]:TEXT:_default' \
+'--replace=[]:TEXT:_default' \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-c[]' \
+'--clear[]' \
+'-p[]' \
+'--pick[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::text:_default' \
+&& ret=0
+;;
+(rename)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-p[]' \
+'--pick[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::text:_default' \
+&& ret=0
+;;
+(pick)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+'::index:_default' \
+&& ret=0
+;;
+(list)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-a[]' \
+'--all[]' \
+'--all-goals[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(undo)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+'::count:_default' \
+&& ret=0
+;;
+(goal)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_trk__subcmd__goal_commands" \
+"*::: :->goal" \
+&& ret=0
+
+    case $state in
+    (goal)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:trk-goal-command-$line[1]:"
+        case $line[1] in
+            (show)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(list)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(new)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-n[]' \
+'--stay[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::title:_default' \
+&& ret=0
+;;
+(switch)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::target:_default' \
+&& ret=0
+;;
+(done)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-f[]' \
+'--force[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(rename)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::title:_default' \
+&& ret=0
+;;
+(reopen)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::target:_default' \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(jot)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::text:_default' \
+&& ret=0
+;;
+(inbox)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_trk__subcmd__inbox_commands" \
+"*::: :->inbox" \
+&& ret=0
+
+    case $state in
+    (inbox)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:trk-inbox-command-$line[1]:"
+        case $line[1] in
+            (take)
+_arguments "${_arguments_options[@]}" : \
+'--goal=[]:NAME:_default' \
+'--new-goal=[]:TITLE:_default' \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-p[]' \
+'--pick[]' \
+'-s[]' \
+'--switch[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'::index:_default' \
+&& ret=0
+;;
+(drop)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+'::index:_default' \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(log)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::when:_default' \
+&& ret=0
+;;
+(at)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-p[]' \
+'--pick[]' \
+'--clear[Remove the schedule]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::when:_default' \
+&& ret=0
+;;
+(agenda)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(start)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'--focus[Start in focus view]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(config)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_trk__subcmd__config_commands" \
+"*::: :->config" \
+&& ret=0
+
+    case $state in
+    (config)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:trk-config-command-$line[1]:"
+        case $line[1] in
+            (show)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(path)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(prompt)
+_arguments "${_arguments_options[@]}" : \
+'--max=[]:MAX:_default' \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(completions)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+':shell:(bash zsh fish powershell elvish)' \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+}
+
+(( $+functions[_trk_commands] )) ||
+_trk_commands() {
+    local commands; commands=(
+'need:What am I doing, and why' \
+'also:Also, this other thing (a new top-level task)' \
+'then:Once this is done, then that (a new parent above the target)' \
+'add:A sibling of the target, right after it' \
+'done:Finish the current task and walk back up' \
+'drop:Abandon the current task' \
+'stop:Leave the current task unfinished, with a reason' \
+'go:Resume the current task; show how I got here' \
+'why:Chain of notes from the root to the current task' \
+'note:Read or add note lines on a task' \
+'rename:Change a task'\''s text' \
+'pick:Choose the current task' \
+'list:The whole task tree of the active goal' \
+'undo:Undo the last N changes' \
+'goal:Goals\: show, list, new, switch, done, rename, reopen' \
+'jot:Quick capture to the inbox' \
+'inbox:View the inbox, take or drop items' \
+'log:What got finished, by day' \
+'at:Schedule a task' \
+'agenda:Scheduled tasks across all goals' \
+'start:Live task list in a terminal pane' \
+'config:Where the task list lives' \
+'prompt:One short line for a shell prompt' \
+'completions:Print shell completion script' \
+    )
+    _describe -t commands 'trk commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__add_commands] )) ||
+_trk__subcmd__add_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk add commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__agenda_commands] )) ||
+_trk__subcmd__agenda_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk agenda commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__also_commands] )) ||
+_trk__subcmd__also_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk also commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__at_commands] )) ||
+_trk__subcmd__at_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk at commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__completions_commands] )) ||
+_trk__subcmd__completions_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk completions commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__config_commands] )) ||
+_trk__subcmd__config_commands() {
+    local commands; commands=(
+'show:Print effective values' \
+'path:Print only the config file path' \
+    )
+    _describe -t commands 'trk config commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__config__subcmd__path_commands] )) ||
+_trk__subcmd__config__subcmd__path_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk config path commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__config__subcmd__show_commands] )) ||
+_trk__subcmd__config__subcmd__show_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk config show commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__done_commands] )) ||
+_trk__subcmd__done_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk done commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__drop_commands] )) ||
+_trk__subcmd__drop_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk drop commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__go_commands] )) ||
+_trk__subcmd__go_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk go commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__goal_commands] )) ||
+_trk__subcmd__goal_commands() {
+    local commands; commands=(
+'show:Print title, id, active marker, and counts' \
+'list:Numbered list of goals' \
+'new:Create an open goal and make it active' \
+'switch:Make another open goal active' \
+'done:Mark the active goal done' \
+'rename:Rename the active goal' \
+'reopen:Reopen a done goal and make it active' \
+    )
+    _describe -t commands 'trk goal commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__goal__subcmd__done_commands] )) ||
+_trk__subcmd__goal__subcmd__done_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk goal done commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__goal__subcmd__list_commands] )) ||
+_trk__subcmd__goal__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk goal list commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__goal__subcmd__new_commands] )) ||
+_trk__subcmd__goal__subcmd__new_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk goal new commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__goal__subcmd__rename_commands] )) ||
+_trk__subcmd__goal__subcmd__rename_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk goal rename commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__goal__subcmd__reopen_commands] )) ||
+_trk__subcmd__goal__subcmd__reopen_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk goal reopen commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__goal__subcmd__show_commands] )) ||
+_trk__subcmd__goal__subcmd__show_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk goal show commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__goal__subcmd__switch_commands] )) ||
+_trk__subcmd__goal__subcmd__switch_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk goal switch commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__inbox_commands] )) ||
+_trk__subcmd__inbox_commands() {
+    local commands; commands=(
+'take:Take an item out of the inbox into a goal' \
+'drop:Drop an item from the inbox' \
+    )
+    _describe -t commands 'trk inbox commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__inbox__subcmd__drop_commands] )) ||
+_trk__subcmd__inbox__subcmd__drop_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk inbox drop commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__inbox__subcmd__take_commands] )) ||
+_trk__subcmd__inbox__subcmd__take_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk inbox take commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__jot_commands] )) ||
+_trk__subcmd__jot_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk jot commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__list_commands] )) ||
+_trk__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk list commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__log_commands] )) ||
+_trk__subcmd__log_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk log commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__need_commands] )) ||
+_trk__subcmd__need_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk need commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__note_commands] )) ||
+_trk__subcmd__note_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk note commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__pick_commands] )) ||
+_trk__subcmd__pick_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk pick commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__prompt_commands] )) ||
+_trk__subcmd__prompt_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk prompt commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__rename_commands] )) ||
+_trk__subcmd__rename_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk rename commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__start_commands] )) ||
+_trk__subcmd__start_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk start commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__stop_commands] )) ||
+_trk__subcmd__stop_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk stop commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__then_commands] )) ||
+_trk__subcmd__then_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk then commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__undo_commands] )) ||
+_trk__subcmd__undo_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk undo commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__why_commands] )) ||
+_trk__subcmd__why_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk why commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_trk" ]; then
+    _trk "$@"
+else
+    compdef _trk trk
+fi

@@ -1,0 +1,43 @@
+[package]
+name = "trk"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+description = "adhd compliant task tracking"
+license = "MIT OR Apache-2.0"
+authors = ["Neil Clack <cnclack@pm.me>"]
+repository = "https://github.com/anomalyco/trk"
+default-run = "trk"
+
+[dependencies]
+anstream = "1.0.0"
+anstyle = "1.0.14"
+anyhow = "1.0.104"
+chrono = { version = "0.4.45", features = ["serde"] }
+clap = { version = "4.6.7", features = ["derive", "wrap_help"] }
+clap_complete = "4.6.11"
+clap_mangen = "0.3.3"
+crossterm = "0.29.0"
+dirs = "7.0.0"
+ratatui = "0.30.2"
+serde = { version = "1.0.229", features = ["derive"] }
+textwrap = "0.16.4"
+thiserror = "2.0.21"
+toml = "1.1.6"
+unicode-width = "0.2.2"
+
+[dev-dependencies]
+assert_cmd = "2.2.2"
+insta = "1.49.0"
+predicates = "3.1.4"
+proptest = "1.11.0"
+tempfile = "3.27.0"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[workspace]
+members = ["xtask"]

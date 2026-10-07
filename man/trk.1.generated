@@ -1,0 +1,106 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH trk 1  "trk 0.1.0" 
+.SH NAME
+trk \- adhd compliant task tracking
+.SH SYNOPSIS
+\fBtrk\fR [\fB\-\-color\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] [\fIsubcommands\fR]
+.SH DESCRIPTION
+adhd compliant task tracking
+.SH OPTIONS
+.TP
+\fB\-\-color\fR \fI<COLOR>\fR
+When to colorize output
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+auto
+.IP \(bu 2
+always
+.IP \(bu 2
+never
+.RE
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version
+.SH SUBCOMMANDS
+.TP
+trk\-need(1)
+What am I doing, and why
+.TP
+trk\-also(1)
+Also, this other thing (a new top\-level task)
+.TP
+trk\-then(1)
+Once this is done, then that (a new parent above the target)
+.TP
+trk\-add(1)
+A sibling of the target, right after it
+.TP
+trk\-done(1)
+Finish the current task and walk back up
+.TP
+trk\-drop(1)
+Abandon the current task
+.TP
+trk\-stop(1)
+Leave the current task unfinished, with a reason
+.TP
+trk\-go(1)
+Resume the current task; show how I got here
+.TP
+trk\-why(1)
+Chain of notes from the root to the current task
+.TP
+trk\-note(1)
+Read or add note lines on a task
+.TP
+trk\-rename(1)
+Change a task\*(Aqs text
+.TP
+trk\-pick(1)
+Choose the current task
+.TP
+trk\-list(1)
+The whole task tree of the active goal
+.TP
+trk\-undo(1)
+Undo the last N changes
+.TP
+trk\-goal(1)
+Goals: show, list, new, switch, done, rename, reopen
+.TP
+trk\-jot(1)
+Quick capture to the inbox
+.TP
+trk\-inbox(1)
+View the inbox, take or drop items
+.TP
+trk\-log(1)
+What got finished, by day
+.TP
+trk\-at(1)
+Schedule a task
+.TP
+trk\-agenda(1)
+Scheduled tasks across all goals
+.TP
+trk\-start(1)
+Live task list in a terminal pane
+.TP
+trk\-config(1)
+Where the task list lives
+.TP
+trk\-prompt(1)
+One short line for a shell prompt
+.TP
+trk\-completions(1)
+Print shell completion script
+.SH VERSION
+v0.1.0
