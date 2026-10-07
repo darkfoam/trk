@@ -1,3 +1,7 @@
+[![ci](https://github.com/darkfoam/trk/actions/workflows/ci.yml/badge.svg)](https://github.com/darkfoam/trk/actions/workflows/ci.yml)
+[![release](https://github.com/darkfoam/trk/actions/workflows/release.yml/badge.svg)](https://github.com/darkfoam/trk/actions/workflows/release.yml)
+[![latest release](https://img.shields.io/github/v/release/darkfoam/trk?sort=semver)](https://github.com/darkfoam/trk/releases/latest)
+
 # trk
 
 > adhd compliant task tracking
