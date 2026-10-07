@@ -3,3 +3,6 @@ tests/fixtures/*.trk text eol=lf
 # The store format and man page are LF by definition.
 *.trk text eol=lf
 man/*.1 text eol=lf
+# Generated shell completions are not project source; keep them out of
+# GitHub's language statistics.
+completions/* linguist-vendored=true linguist-generated=true
