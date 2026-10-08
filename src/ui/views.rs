@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{Datelike, Duration, NaiveDate};
+use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDate};
 
 use super::style::{Role, Style, StyledLine};
 use super::wrap;
@@ -349,8 +349,15 @@ fn weekday_abbrev(day: chrono::Weekday) -> &'static str {
 }
 
 /// 7.6 Agenda view across all goals.
-pub fn agenda_view(doc: &Doc, today: NaiveDate, width: usize, style: Style) -> Vec<StyledLine> {
+pub fn agenda_view(
+    doc: &Doc,
+    now: DateTime<FixedOffset>,
+    width: usize,
+    style: Style,
+) -> Vec<StyledLine> {
     let _ = (width, style);
+    let today = now.date_naive();
+    let now_time = now.time();
     struct Entry {
         date: NaiveDate,
         time: Option<chrono::NaiveTime>,
@@ -380,18 +387,12 @@ pub fn agenda_view(doc: &Doc, today: NaiveDate, width: usize, style: Style) -> V
         return vec![plain("nothing scheduled")];
     }
 
-    let overdue: Vec<&Entry> = entries
-        .iter()
-        .filter(|e| {
-            e.date < today
-                || (e.date <= today
-                    && e.time.is_some()
-                    && e.time.unwrap() < chrono::Local::now().time()
-                    && e.date == today)
-        })
-        .collect();
+    // A task is overdue when its date is past, or it is due earlier today.
+    let is_overdue =
+        |e: &Entry| e.date < today || (e.date == today && e.time.is_some_and(|t| t < now_time));
 
     let mut out = Vec::new();
+    let overdue: Vec<&Entry> = entries.iter().filter(|e| is_overdue(e)).collect();
     if !overdue.is_empty() {
         out.push(styled("Overdue", Role::Title));
         let mut sorted: Vec<&&Entry> = overdue.iter().collect();
@@ -410,16 +411,24 @@ pub fn agenda_view(doc: &Doc, today: NaiveDate, width: usize, style: Style) -> V
     dates.sort_unstable();
     dates.dedup();
     for date in dates {
-        if date <= today {
+        if date < today {
             continue;
         }
-        let label = format!("{} {}", date.format("%a"), date.format("%Y-%m-%d"));
-        out.push(styled(label, Role::Title));
-        let mut day_entries: Vec<&Entry> = entries.iter().filter(|e| e.date == date).collect();
-        day_entries.sort_by_key(|e| (e.time.is_none(), e.time));
+        // Overdue items already appeared above; everything else is upcoming.
+        let mut day_entries: Vec<&Entry> = entries
+            .iter()
+            .filter(|e| e.date == date && !is_overdue(e))
+            .collect();
         if day_entries.is_empty() {
-            out.push(styled("  (nothing scheduled)", Role::Dim));
+            continue;
         }
+        let label = if date == today {
+            format!("Today  {}", date.format("%a %Y-%m-%d"))
+        } else {
+            date.format("%a %Y-%m-%d").to_string()
+        };
+        out.push(styled(label, Role::Title));
+        day_entries.sort_by_key(|e| (e.time.is_none(), e.time));
         for e in day_entries {
             let time = e
                 .time

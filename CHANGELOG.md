@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-08
+
 ### Changed
 
 - Rewrote `man/trk.1` as a tighter, complete usage book: removed the repeated
@@ -20,6 +22,24 @@ and this project adheres to
   example and an incorrect alias listing.
 - Regenerated `man/trk.1.generated` so its subcommand skeleton names the current
   `add` command instead of the removed `need`.
+- The crate version now tracks the release tags. Earlier `0.2.x` tags built
+  binaries that still reported `0.1.0` because `Cargo.toml` had not been bumped;
+  it is now `0.2.1`.
+
+### Fixed
+
+- `trk inbox take -s/--switch` now actually picks a parent task inside the
+  chosen goal, as documented. The flag was parsed but ignored, so the taken
+  item was always added as a root; with `--new-goal` it now reports a usage
+  error, since a fresh goal has no task to parent under.
+- `trk goal switch N` and `trk goal reopen N` now use the same numbering as
+  `trk goal list` (which numbers every goal). They previously numbered only the
+  open goals, so the numbers diverged once a done goal existed, and `goal
+  reopen` could never select a done goal at all.
+- `trk agenda` no longer drops tasks scheduled for later today: they appear
+  under a `Today` heading instead of vanishing. It also compares against the
+  injected clock rather than the wall clock, so the view is deterministic under
+  `TRK_NOW`.
 
 ## [0.2.0] - 2026-10-07
 
@@ -74,7 +94,8 @@ and this project adheres to
   agenda, the log, pickers, the `trk start` TUI, undo, shell completions, and
   the man page.
 
-[Unreleased]: https://github.com/darkfoam/trk/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/darkfoam/trk/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/darkfoam/trk/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/darkfoam/trk/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/darkfoam/trk/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/darkfoam/trk/releases/tag/v0.1.0

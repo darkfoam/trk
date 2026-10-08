@@ -567,8 +567,10 @@ fn run(ctx: &Ctx, ui: &mut dyn Ui, command: Command) -> Result<i32, TrkError> {
         Command::Agenda => {
             let store = active_store(ctx);
             let doc = store.read()?;
-            let today = now(ctx).date_naive();
-            print_lines(ctx, &views::agenda_view(&doc, today, ctx.wrap, ctx.style()));
+            print_lines(
+                ctx,
+                &views::agenda_view(&doc, now(ctx), ctx.wrap, ctx.style()),
+            );
             Ok(0)
         }
         Command::Start(args) => {
@@ -656,7 +658,7 @@ fn goal_command(ctx: &Ctx, ui: &mut dyn Ui, args: GoalArgs) -> Result<i32, TrkEr
             )
         }
         Some(GoalCommand::Switch(a)) => {
-            let id = resolve_goal_index(&doc, a.index, ui)?;
+            let id = resolve_goal_index(&doc, a.index, ui, GoalFilter::Open)?;
             mutate(ctx, "goal switch", &Request::GoalSwitch { id })
         }
         Some(GoalCommand::Done(a)) => {
@@ -670,24 +672,53 @@ fn goal_command(ctx: &Ctx, ui: &mut dyn Ui, args: GoalArgs) -> Result<i32, TrkEr
             mutate(ctx, "goal rename", &Request::GoalRename { title })
         }
         Some(GoalCommand::Reopen(a)) => {
-            let id = resolve_goal_index(&doc, a.index, ui)?;
+            let id = resolve_goal_index(&doc, a.index, ui, GoalFilter::Done)?;
             mutate(ctx, "goal reopen", &Request::GoalReopen { id })
         }
     }
 }
 
-fn resolve_goal_index(doc: &Doc, index: Option<usize>, ui: &mut dyn Ui) -> Result<u64, TrkError> {
-    let open: Vec<&Goal> = doc.goals.iter().filter(|g| g.is_open()).collect();
+/// Which goals a `goal switch`/`goal reopen` selection may target.
+#[derive(Clone, Copy)]
+enum GoalFilter {
+    Open,
+    Done,
+}
+
+/// Resolve a goal number or picker choice. Numbers are the ones shown by
+/// `trk goal list`, which numbers every goal; the filter decides whether an
+/// open or a done goal is acceptable.
+fn resolve_goal_index(
+    doc: &Doc,
+    index: Option<usize>,
+    ui: &mut dyn Ui,
+    filter: GoalFilter,
+) -> Result<u64, TrkError> {
+    let wanted = |g: &Goal| match filter {
+        GoalFilter::Open => g.is_open(),
+        GoalFilter::Done => !g.is_open(),
+    };
     match index {
-        Some(n) if n >= 1 => open
-            .get(n - 1)
-            .map(|g| g.id)
-            .ok_or_else(|| TrkError::Usage(format!("no goal number {n}"))),
+        Some(n) if n >= 1 => {
+            let goal = doc
+                .goals
+                .get(n - 1)
+                .ok_or_else(|| TrkError::Usage(format!("no goal number {n}")))?;
+            if !wanted(goal) {
+                return Err(TrkError::Usage(match filter {
+                    GoalFilter::Open => format!("goal {n} is not open"),
+                    GoalFilter::Done => format!("goal {n} is not done"),
+                }));
+            }
+            Ok(goal.id)
+        }
         Some(n) => Err(TrkError::Usage(format!("no goal number {n}"))),
         None => {
-            let rows: Vec<PickRow> = open
+            let rows: Vec<PickRow> = doc
+                .goals
                 .iter()
                 .enumerate()
+                .filter(|(_, g)| wanted(g))
                 .map(|(i, g)| PickRow {
                     id: g.id,
                     label: format!("{:>2}  {}", i + 1, g.title),
@@ -696,11 +727,17 @@ fn resolve_goal_index(doc: &Doc, index: Option<usize>, ui: &mut dyn Ui) -> Resul
                 })
                 .collect();
             if rows.is_empty() {
-                return Err(TrkError::Usage("no open goals".into()));
+                return Err(TrkError::Usage(match filter {
+                    GoalFilter::Open => "no open goals".into(),
+                    GoalFilter::Done => "no done goals".into(),
+                }));
             }
             let initial = rows.iter().position(|r| r.current).unwrap_or(0);
             let spec = PickSpec {
-                header: "switch to which goal?".into(),
+                header: match filter {
+                    GoalFilter::Open => "switch to which goal?".into(),
+                    GoalFilter::Done => "reopen which goal?".into(),
+                },
                 rows,
                 initial,
             };
@@ -842,6 +879,18 @@ fn inbox_command(ctx: &Ctx, ui: &mut dyn Ui, args: InboxArgs) -> Result<i32, Trk
                 }
             };
 
+            let parent = if a.switch {
+                let goal = goal_id.and_then(|id| doc.goal(id)).ok_or_else(|| {
+                    TrkError::Usage("inbox take: --switch needs an existing goal with tasks".into())
+                })?;
+                match switch_target(ctx, ui, goal, "put it under which task?")? {
+                    Target::Task(id) => Some(id),
+                    Target::Current => None,
+                }
+            } else {
+                None
+            };
+
             let why = {
                 if !ctx.config.prompt_why || !ctx.interactive() {
                     None
@@ -860,7 +909,7 @@ fn inbox_command(ctx: &Ctx, ui: &mut dyn Ui, args: InboxArgs) -> Result<i32, Trk
                     id: item.id,
                     goal: goal_id,
                     new_goal,
-                    parent: None,
+                    parent,
                     why,
                     switch: a.activate,
                 },

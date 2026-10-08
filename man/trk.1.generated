@@ -1,6 +1,6 @@
 .ie \n(.g .ds Aq \(aq
 .el .ds Aq '
-.TH trk 1  "trk 0.1.0" 
+.TH trk 1  "trk 0.2.1" 
 .SH NAME
 trk \- adhd compliant task tracking
 .SH SYNOPSIS
@@ -103,4 +103,4 @@ One short line for a shell prompt
 trk\-completions(1)
 Print shell completion script
 .SH VERSION
-v0.1.0
+v0.2.1

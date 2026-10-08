@@ -324,3 +324,64 @@ fn wrap_config_limits_output_width() {
         );
     }
 }
+
+#[test]
+fn agenda_shows_todays_upcoming_task() {
+    // TRK_NOW pins "now" to 09:00, so 23:00 today is still upcoming and must
+    // appear under Today rather than being dropped.
+    let env = Env::new();
+    env.run(&["goal", "new", "G"]).success();
+    env.run(&["by", "Later today"]).success();
+    env.run(&["at", "23:00"]).success();
+    env.run(&["agenda"])
+        .success()
+        .stdout(predicate::str::contains("Today"))
+        .stdout(predicate::str::contains("Later today"))
+        .stdout(predicate::str::contains("23:00"));
+}
+
+#[test]
+fn goal_switch_and_reopen_share_goal_list_numbers() {
+    let env = Env::new();
+    env.run(&["goal", "new", "One"]).success();
+    env.run(&["by", "one task"]).success();
+    env.run(&["done"]).success();
+    env.run(&["goal", "done"]).success();
+    env.run(&["goal", "new", "Two"]).success();
+    env.run(&["by", "two task"]).success();
+
+    // g1 is done and g2 is open; `goal list` numbers both from 1.
+    env.run(&["goal", "list"])
+        .success()
+        .stdout(predicate::str::contains("(done)"));
+    // switch refuses the done goal's number, reopen accepts it.
+    env.run(&["goal", "switch", "1"]).code(2);
+    env.run(&["goal", "reopen", "1"])
+        .success()
+        .stdout(predicate::str::contains("One"));
+    // switching to the open goal's number still works.
+    env.run(&["goal", "switch", "2"])
+        .success()
+        .stdout(predicate::str::contains("two task"));
+}
+
+#[test]
+fn inbox_take_switch_honours_the_flag() {
+    let env = Env::new();
+    env.run(&["goal", "new", "G"]).success();
+    env.run(&["by", "root task"]).success();
+    env.run(&["jot", "filed thing"]).success();
+    // With no terminal the picker cannot run, so -s must fail rather than
+    // silently creating a root task.
+    env.run(&["inbox", "take", "1", "--goal", "G", "-s"])
+        .code(1)
+        .stderr(predicate::str::contains("picker"));
+}
+
+#[test]
+fn inbox_take_switch_needs_an_existing_goal() {
+    let env = Env::new();
+    env.run(&["jot", "thing"]).success();
+    env.run(&["inbox", "take", "1", "--new-goal", "X", "-s"])
+        .code(2);
+}
