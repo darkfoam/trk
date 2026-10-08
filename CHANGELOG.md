@@ -8,6 +8,19 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Rewrote `man/trk.1` as a tighter, complete usage book: removed the repeated
+  per-command "thought process" prose in favour of one worked session, fixed
+  stale references to the old `need` command, documented the one-letter command
+  aliases, and expanded the explanation of `trk then` and how it differs from
+  `trk add`.
+- Trimmed `README.md` to an introduction, quick start, and command reference,
+  deferring the full walkthrough to the man page; fixed an invalid `goal new -w`
+  example and an incorrect alias listing.
+- Regenerated `man/trk.1.generated` so its subcommand skeleton names the current
+  `add` command instead of the removed `need`.
+
 ## [0.2.0] - 2026-10-07
 
 ### Added

@@ -31,8 +31,8 @@ Print help
 Print version
 .SH SUBCOMMANDS
 .TP
-trk\-need(1)
-What am I doing, and why
+trk\-add(1)
+Add X: a new task under the current task; you descend
 .TP
 trk\-by(1)
 Goal by X: a direct task under the active goal
