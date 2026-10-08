@@ -29,9 +29,9 @@ always\t''
 never\t''"
 complete -c trk -n "__fish_trk_needs_command" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_needs_command" -s V -l version -d 'Print version'
-complete -c trk -n "__fish_trk_needs_command" -f -a "need" -d 'What am I doing, and why'
+complete -c trk -n "__fish_trk_needs_command" -f -a "add" -d 'Add X: a new task under the current task; you descend'
 complete -c trk -n "__fish_trk_needs_command" -f -a "by" -d 'Goal by X: a direct task under the active goal'
-complete -c trk -n "__fish_trk_needs_command" -f -a "then" -d 'Once this is done, then X: wrap the current chain in a new parent'
+complete -c trk -n "__fish_trk_needs_command" -f -a "then" -d 'Once this is done, then X: make X the parent of a picked task'
 complete -c trk -n "__fish_trk_needs_command" -f -a "and" -d 'And X: another task at the same level as the target'
 complete -c trk -n "__fish_trk_needs_command" -f -a "done" -d 'Finish the current task and walk back up'
 complete -c trk -n "__fish_trk_needs_command" -f -a "drop" -d 'Abandon the current task'
@@ -53,14 +53,14 @@ complete -c trk -n "__fish_trk_needs_command" -f -a "start" -d 'Live task list i
 complete -c trk -n "__fish_trk_needs_command" -f -a "config" -d 'Where the task list lives'
 complete -c trk -n "__fish_trk_needs_command" -f -a "prompt" -d 'One short line for a shell prompt'
 complete -c trk -n "__fish_trk_needs_command" -f -a "completions" -d 'Print shell completion script'
-complete -c trk -n "__fish_trk_using_subcommand need" -s w -l why -d 'Supply the why inline (skips the prompt)' -r
-complete -c trk -n "__fish_trk_using_subcommand need" -l color -d 'When to colorize output' -r -f -a "auto\t''
+complete -c trk -n "__fish_trk_using_subcommand add" -s w -l why -d 'Supply the why inline (skips the prompt)' -r
+complete -c trk -n "__fish_trk_using_subcommand add" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c trk -n "__fish_trk_using_subcommand need" -s s -l switch -d 'Switch to choose the target task instead of using the current task'
-complete -c trk -n "__fish_trk_using_subcommand need" -s n -l stay -d 'Do not move the cursor onto the new task'
-complete -c trk -n "__fish_trk_using_subcommand need" -l no-why -d 'Do not ask for a why'
-complete -c trk -n "__fish_trk_using_subcommand need" -s h -l help -d 'Print help'
+complete -c trk -n "__fish_trk_using_subcommand add" -s s -s p -l switch -d 'Switch to choose the parent task instead of using the current task'
+complete -c trk -n "__fish_trk_using_subcommand add" -s n -l stay -d 'Do not move the cursor onto the new task'
+complete -c trk -n "__fish_trk_using_subcommand add" -l no-why -d 'Do not ask for a why'
+complete -c trk -n "__fish_trk_using_subcommand add" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand by" -s w -l why -r
 complete -c trk -n "__fish_trk_using_subcommand by" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
@@ -71,14 +71,14 @@ complete -c trk -n "__fish_trk_using_subcommand then" -s w -l why -r
 complete -c trk -n "__fish_trk_using_subcommand then" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c trk -n "__fish_trk_using_subcommand then" -s s -l switch
+complete -c trk -n "__fish_trk_using_subcommand then" -s c -l current -d 'Use the current task instead of picking one'
 complete -c trk -n "__fish_trk_using_subcommand then" -l no-why
 complete -c trk -n "__fish_trk_using_subcommand then" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand and" -s w -l why -r
 complete -c trk -n "__fish_trk_using_subcommand and" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c trk -n "__fish_trk_using_subcommand and" -s s -l switch
+complete -c trk -n "__fish_trk_using_subcommand and" -s s -s p -l switch
 complete -c trk -n "__fish_trk_using_subcommand and" -l no-why
 complete -c trk -n "__fish_trk_using_subcommand and" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand done" -l color -d 'When to colorize output' -r -f -a "auto\t''
@@ -95,7 +95,7 @@ complete -c trk -n "__fish_trk_using_subcommand drop" -s h -l help -d 'Print hel
 complete -c trk -n "__fish_trk_using_subcommand stop" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c trk -n "__fish_trk_using_subcommand stop" -s s -l switch
+complete -c trk -n "__fish_trk_using_subcommand stop" -s s -s p -l switch
 complete -c trk -n "__fish_trk_using_subcommand stop" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand go" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
@@ -104,19 +104,19 @@ complete -c trk -n "__fish_trk_using_subcommand go" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand why" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c trk -n "__fish_trk_using_subcommand why" -s s -l switch
+complete -c trk -n "__fish_trk_using_subcommand why" -s s -s p -l switch
 complete -c trk -n "__fish_trk_using_subcommand why" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand note" -s r -l replace -r
 complete -c trk -n "__fish_trk_using_subcommand note" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
 never\t''"
 complete -c trk -n "__fish_trk_using_subcommand note" -s c -l clear
-complete -c trk -n "__fish_trk_using_subcommand note" -s s -l switch
+complete -c trk -n "__fish_trk_using_subcommand note" -s s -s p -l switch
 complete -c trk -n "__fish_trk_using_subcommand note" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand rename" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c trk -n "__fish_trk_using_subcommand rename" -s s -l switch
+complete -c trk -n "__fish_trk_using_subcommand rename" -s s -s p -l switch
 complete -c trk -n "__fish_trk_using_subcommand rename" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand switch" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
@@ -188,7 +188,7 @@ complete -c trk -n "__fish_trk_using_subcommand inbox; and __fish_seen_subcomman
 complete -c trk -n "__fish_trk_using_subcommand inbox; and __fish_seen_subcommand_from take" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c trk -n "__fish_trk_using_subcommand inbox; and __fish_seen_subcommand_from take" -s s -l switch -d 'Switch to choose the parent task instead of making a root'
+complete -c trk -n "__fish_trk_using_subcommand inbox; and __fish_seen_subcommand_from take" -s s -s p -l switch -d 'Switch to choose the parent task instead of making a root'
 complete -c trk -n "__fish_trk_using_subcommand inbox; and __fish_seen_subcommand_from take" -s a -l activate -d 'Make the chosen goal active'
 complete -c trk -n "__fish_trk_using_subcommand inbox; and __fish_seen_subcommand_from take" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand inbox; and __fish_seen_subcommand_from drop" -l color -d 'When to colorize output' -r -f -a "auto\t''
@@ -202,7 +202,7 @@ complete -c trk -n "__fish_trk_using_subcommand log" -s h -l help -d 'Print help
 complete -c trk -n "__fish_trk_using_subcommand at" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c trk -n "__fish_trk_using_subcommand at" -s s -l switch
+complete -c trk -n "__fish_trk_using_subcommand at" -s s -s p -l switch
 complete -c trk -n "__fish_trk_using_subcommand at" -l clear -d 'Remove the schedule'
 complete -c trk -n "__fish_trk_using_subcommand at" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand agenda" -l color -d 'When to colorize output' -r -f -a "auto\t''

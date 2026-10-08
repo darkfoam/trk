@@ -353,14 +353,29 @@ fn unfinished_rows(goal: &Goal, style: &style::Style) -> Vec<PickRow> {
     rows
 }
 
+/// Which row a picker starts on: the current task normally, or the most
+/// recently created task when `prefer_newest` is set.
+fn picker_initial(rows: &[PickRow], prefer_newest: bool) -> usize {
+    let found = if prefer_newest {
+        rows.iter()
+            .enumerate()
+            .max_by_key(|(_, r)| r.id)
+            .map(|(i, _)| i)
+    } else {
+        rows.iter().position(|r| r.current)
+    };
+    found.unwrap_or(0)
+}
+
 fn switch_target(
     ctx: &Ctx,
     ui: &mut dyn Ui,
     goal: &Goal,
     header: &str,
+    prefer_newest: bool,
 ) -> Result<Target, TrkError> {
     let rows = unfinished_rows(goal, &ctx.style());
-    let initial = rows.iter().position(|r| r.current).unwrap_or(0);
+    let initial = picker_initial(&rows, prefer_newest);
     let spec = PickSpec {
         header: header.to_string(),
         rows,
@@ -378,6 +393,18 @@ fn resolved_target(
     switch: bool,
     header: &str,
 ) -> Result<Target, TrkError> {
+    resolved_target_prefer(ctx, ui, switch, header, false)
+}
+
+/// Like `resolved_target`, but the picker highlights the most recently created
+/// task when `prefer_newest` is set (used by `then` so repeated calls chain).
+fn resolved_target_prefer(
+    ctx: &Ctx,
+    ui: &mut dyn Ui,
+    switch: bool,
+    header: &str,
+    prefer_newest: bool,
+) -> Result<Target, TrkError> {
     if !switch {
         return Ok(Target::Current);
     }
@@ -386,7 +413,7 @@ fn resolved_target(
     let goal = doc
         .active_goal()
         .ok_or(TrkError::Op(ops::OpError::NoActiveGoal))?;
-    switch_target(ctx, ui, goal, header)
+    switch_target(ctx, ui, goal, header, prefer_newest)
 }
 
 fn resolve_why(
@@ -444,7 +471,13 @@ fn run(ctx: &Ctx, ui: &mut dyn Ui, command: Command) -> Result<i32, TrkError> {
             if text.trim().is_empty() {
                 return Err(TrkError::Usage("then: give the task text".into()));
             }
-            let target = resolved_target(ctx, ui, args.switch, "after which task?")?;
+            let target = resolved_target_prefer(
+                ctx,
+                ui,
+                !args.current,
+                "make it the parent of which task?",
+                true,
+            )?;
             let why = resolve_why(ctx, ui, args.why, args.no_why)?;
             mutate(ctx, "then", &Request::Then { text, why, target })
         }
@@ -598,7 +631,7 @@ fn switch_command(ctx: &Ctx, ui: &mut dyn Ui, args: SwitchArgs) -> Result<i32, T
                 .ok_or_else(|| TrkError::Usage(format!("switch: no task number {index}")))?;
             Target::Task(row.id)
         }
-        None => switch_target(ctx, ui, goal, "work on which task?")?,
+        None => switch_target(ctx, ui, goal, "work on which task?", false)?,
     };
     mutate(ctx, "switch", &Request::Switch { target })
 }
@@ -883,7 +916,7 @@ fn inbox_command(ctx: &Ctx, ui: &mut dyn Ui, args: InboxArgs) -> Result<i32, Trk
                 let goal = goal_id.and_then(|id| doc.goal(id)).ok_or_else(|| {
                     TrkError::Usage("inbox take: --switch needs an existing goal with tasks".into())
                 })?;
-                match switch_target(ctx, ui, goal, "put it under which task?")? {
+                match switch_target(ctx, ui, goal, "put it under which task?", false)? {
                     Target::Task(id) => Some(id),
                     Target::Current => None,
                 }
@@ -1194,4 +1227,26 @@ pub fn clock_now(ctx: &Ctx) -> DateTime<FixedOffset> {
 
 pub fn local_now() -> DateTime<FixedOffset> {
     Local::now().fixed_offset()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn row(id: u64, number: usize, current: bool) -> PickRow {
+        PickRow {
+            id,
+            label: format!("{number}"),
+            number: Some(number),
+            current,
+        }
+    }
+
+    #[test]
+    fn picker_initial_prefers_current_or_newest() {
+        let rows = vec![row(10, 1, false), row(11, 2, true), row(12, 3, false)];
+        assert_eq!(picker_initial(&rows, false), 1, "current task");
+        assert_eq!(picker_initial(&rows, true), 2, "highest id");
+        assert_eq!(picker_initial(&[], true), 0, "empty defaults to zero");
+    }
 }

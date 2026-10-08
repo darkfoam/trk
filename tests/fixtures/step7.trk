@@ -4,15 +4,15 @@ active g1
 
 goal g1 open 2026-10-07T09:00:00-05:00 Ship login fix
   current t3
-  [ ] t6 2026-10-07T09:00:00-05:00 Document the process
-    | after the fix ships
-    [ ] t1 2026-10-07T09:00:00-05:00 Fix login bug
-      | customers locked out
-      [ ] t2 2026-10-07T09:00:00-05:00 Reproduce on staging
-        | need a failing case
+  [ ] t1 2026-10-07T09:00:00-05:00 Fix login bug
+    | customers locked out
+    [ ] t2 2026-10-07T09:00:00-05:00 Reproduce on staging
+      | need a failing case
+      [ ] t6 2026-10-07T09:00:00-05:00 Document the process
+        | after the fix ships
         [ ] t3 2026-10-07T09:00:00-05:00 Get staging creds
           | can't log in
-      [ ] t5 2026-10-07T09:00:00-05:00 Check auth logs
-        | might explain the 401s
+    [ ] t5 2026-10-07T09:00:00-05:00 Check auth logs
+      | might explain the 401s
   [ ] t4 2026-10-07T09:00:00-05:00 Call internet company
     | wifi flaky

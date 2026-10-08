@@ -128,7 +128,7 @@ it. This is the single most important command for capturing a rabbit hole.
 target and stay.
 .TP
 .B "trk then X"
-"Once this is done, then X." Wrap the current branch in a new parent and stay.
+"Once this is done, then X." Make X the parent of a task you pick and stay.
 This is how you build a plan forward from the first step; see
 .BR "trk then" .
 .PP
@@ -305,19 +305,25 @@ added: Call internet company
 .RE
 .SS trk then
 .nf
-trk then [\-s|--switch] [\-w \fIWHY\fR] [--no\-why] \fITEXT\fR ...
+trk then [\-c|\-\-current] [\-w \fIWHY\fR] [--no\-why] \fITEXT\fR ...
 .fi
 .PP
-"Once I am done with this, then that." Creates a new task and uses it to wrap
-the branch you are on: the new task becomes the parent of the outermost task in
-the branch containing the target, so the whole branch moves underneath it. The
-cursor does not move, unless it was empty. Think of it as stretching a new frame
-around the work you have already described.
+"Once I am done with this, then that." Creates a new task and makes it the
+direct parent of the target, so the target and everything below it moves
+underneath the new task. The cursor does not move, unless it was empty. Think of
+it as inserting one more step just above the work you picked.
 .PP
-This is how you build a plan outward from the first step instead of backward
-from a final goal. Each
+By default you choose the target in a picker (or, without a terminal, by a
+number read from standard input); the picker starts on the most recently created
+task, so repeated
 .B then
-adds the next thing to do as the new outer task, and because that task is a
+grows the chain: wrap a task with one step, then wrap that step with the next.
+Pass
+.B \-c
+to target the current task instead. This is how you build a plan outward from
+the first step instead of backward from a final goal. Each
+.B then
+adds the next thing to do as a new outer task, and because that task is a
 parent, finishing the step beneath it walks you up the chain in order. Repeated
 .B then
 therefore produces a list that reads top to bottom while your cursor stays on
@@ -337,16 +343,16 @@ it (a new parent).
 .PP
 For example, if you are on "Download the USB image" and run
 .B trk then "Install the USB image to a flash drive"
-then that becomes the parent and "Download the USB image" its child. Run
+and pick "Download the USB image", then the new task becomes its parent. Run
 .B trk then "Install the image onto a system"
-next, and it wraps the chain again, becoming the parent of "Install the USB
-image to a flash drive". You stay on "Download the USB image" the whole time;
-finishing it with
+next and accept the default (the task you just added), and it becomes the parent
+of "Install the USB image to a flash drive". You stay on "Download the USB
+image" the whole time; finishing it with
 .B trk done
 moves you to the next step, and so on up the plan.
 .TP
-.B \-s, \-\-switch
-Choose the target in a picker instead of using the current task.
+.B \-c, \-\-current
+Target the current task instead of picking one.
 .TP
 .B \-w, \-\-why \fIWHY\fP
 Supply the why inline.
@@ -356,11 +362,11 @@ Skip the why prompt.
 .PP
 .RS 4
 .nf
-$ trk then Document the process \-w "after the fix ships"
+$ trk then \-c Document the process \-w "after the fix ships"
 Ship login fix
-  Document the process
-    Fix login bug
-      Reproduce on staging
+  Fix login bug
+    Reproduce on staging
+      Document the process
         > Get staging creds
 .fi
 .RE
@@ -1153,26 +1159,26 @@ I realize the credential step is contained by a documentation step that happens
 after shipping.
 .RS 4
 .nf
-$ trk then Document the process \-w "after the fix ships"
+$ trk then \-c Document the process \-w "after the fix ships"
 Ship login fix
-  Document the process
-    Fix login bug
-      Reproduce on staging
+  Fix login bug
+    Reproduce on staging
+      Document the process
         > Get staging creds
           why: can't log in
 .fi
 .RE
 .B then
-wrapped my whole chain in the new task. My place is unchanged, but it now sits
-inside a larger, correct frame.
+inserted the new task directly above the credential step. My place is unchanged,
+but the step now sits under a new, correct parent.
 .PP
 .I "Step 7: finishing the leaf."
 I have the credentials.
 .RS 4
 .nf
 $ trk done
-back to: Reproduce on staging
-  why: need a failing case
+back to: Document the process
+  why: after the fix ships
 .fi
 .RE
 .B trk
@@ -1185,10 +1191,10 @@ and named it.
 I continue finishing, one sensible step at a time:
 .RS 4
 .nf
+$ trk done    # Document the process is done; back to Reproduce on staging
 $ trk done    # Reproduce on staging is done; next: Check auth logs
 $ trk done    # Check auth logs is done; back to Fix login bug
-$ trk done    # Fix login bug is done; back to Document the process
-$ trk done    # Document the process is done; next top\-level task: Call internet company
+$ trk done    # Fix login bug is done; next top\-level task: Call internet company
 $ trk done    # Call internet company is done; goal has no open tasks
 .fi
 .RE

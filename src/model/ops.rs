@@ -378,19 +378,21 @@ fn op_then(
     let mut new_task = Task::new(id, text.trim().to_string(), now);
     push_why(&mut new_task, why);
 
-    // `then` wraps the current task's whole chain: the new task becomes the
-    // parent of the outermost ancestor (root) of the target, so finishing the
-    // current task walks up the chain in order.
-    let root_index = {
-        let goal = doc.goal(goal_id).expect("active goal exists");
-        let path = tree::find_path(goal, target_id).ok_or(OpError::TargetNotFound(target_id))?;
-        path[0]
-    };
-
+    // `then` wraps the target itself: the new task becomes its direct parent,
+    // so the target (and everything below it) moves underneath the new task.
     let goal = doc.goal_mut(goal_id).expect("active goal exists");
-    let old_root = goal.roots.remove(root_index);
-    new_task.children.push(old_root);
-    goal.roots.insert(root_index, new_task);
+    let path = tree::find_path(goal, target_id).ok_or(OpError::TargetNotFound(target_id))?;
+    let (&last, parent_path) = path.split_last().expect("find_path never returns empty");
+    let siblings = if parent_path.is_empty() {
+        &mut goal.roots
+    } else {
+        &mut tree::task_at_mut(goal, parent_path)
+            .ok_or(OpError::TargetNotFound(target_id))?
+            .children
+    };
+    let old = siblings.remove(last);
+    new_task.children.push(old);
+    siblings.insert(last, new_task);
     if goal.cursor.is_none() {
         goal.cursor = Some(id);
     }

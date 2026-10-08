@@ -12,8 +12,23 @@ and this project adheres to
 
 - Pickers now work without a terminal: when one cannot be drawn, the numbered
   choices are printed to standard error and the number is read from standard
-  input (an empty line accepts the highlighted default), so `-s`/`--switch`
-  pickers can be driven from a script or pipeline.
+  input (an empty line accepts the highlighted default), so `trk then` default
+  picking (and `-s`/`--switch` elsewhere) can be driven from a script or
+  pipeline.
+- The `trk then` picker starts on the most recently created task, so repeated
+  `then` chains: wrap a task, then wrap that new task, and so on.
+
+### Changed
+
+- `trk then X` now picks the target by default instead of silently using the
+  current task. Pass `-c`/`--current` to target the current task. The old
+  `-s`/`--switch` flag is gone, since picking is now the default.
+
+### Fixed
+
+- `trk then X` now makes X the direct parent of the picked task, instead of the
+  parent of the whole top-level branch containing it. Selecting a nested task no
+  longer creates a new top-level task wrapping the entire tree.
 
 ## [0.2.1] - 2026-10-08
 

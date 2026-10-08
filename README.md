@@ -118,11 +118,12 @@ Four moves cover almost everything that happens mid-work:
 | `trk add X` | a child of the current task: "I need X to finish this" | descends |
 | `trk by X` | an unrelated top-level task: "also, X" | stays |
 | `trk and X` | a sibling right after the target: "and X, at this level" | stays |
-| `trk then X` | a new parent wrapping the current branch: "then, X" | stays |
+| `trk then X` | a new parent of a picked task: "then, X" | stays |
 
 `add` records what you need *before* the current task; `then` records what
-happens *after* it. Repeated `then` grows a plan forward from the first step
-while your cursor stays put, and `trk done` walks you back up it one task at a
+happens *after* it. Repeated `then` grows a plan forward from the first step: the
+picker starts on the task you just added, so pressing Enter again wraps that new
+step, while your cursor stays put and `trk done` walks you back up one task at a
 time.
 
 A parent cannot be completed while it still has open descendants: `trk done`
@@ -141,7 +142,7 @@ a full worked session — see the man page (`man trk`) or
 | `trk` | what am I doing, and why |
 | `trk add <text>` | new child of current task; descend |
 | `trk by <text>` | new top-level task; stay |
-| `trk then <text>` | new parent wrapping the current branch; stay |
+| `trk then <text>` | new parent of a picked task (`-c` for current); stay |
 | `trk and <text>` | new sibling after target; stay |
 | `trk done` | finish current; walk back up |
 | `trk drop` | abandon current (reversible) |
@@ -167,12 +168,12 @@ a full worked session — see the man page (`man trk`) or
 Aliases: `d` done, `u` undo, `l` list, `n` note, `w` why, `s` stop, `g` goal,
 `i` jot.
 
-Useful flags: `-s/--switch` chooses a target in a picker; `-w <why>` supplies
-the why inline; `-n/--stay` keeps the cursor put; `-f/--force` overrides a
-blocked `done`/`drop`/`goal done`; `--no-why` skips the why prompt. Without a
-terminal a picker prints its numbered choices to stderr and reads the number
-from stdin (an empty line accepts the highlighted default), so it can be
-scripted.
+Useful flags: `-s/--switch` chooses a target in a picker; `-c/--current` makes
+`then` target the current task instead of picking; `-w <why>` supplies the why
+inline; `-n/--stay` keeps the cursor put; `-f/--force` overrides a blocked
+`done`/`drop`/`goal done`; `--no-why` skips the why prompt. Without a terminal a
+picker prints its numbered choices to stderr and reads the number from stdin (an
+empty line accepts the highlighted default), so it can be scripted.
 
 ## Configuration
 

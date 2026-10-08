@@ -51,7 +51,7 @@ pub enum Command {
     Add(AddArgs),
     /// Goal by X: a direct task under the active goal.
     By(ByArgs),
-    /// Once this is done, then X: wrap the current chain in a new parent.
+    /// Once this is done, then X: make X the parent of a picked task.
     Then(ThenArgs),
     /// And X: another task at the same level as the target.
     And(AndArgs),
@@ -137,8 +137,9 @@ pub struct ByArgs {
 pub struct ThenArgs {
     #[arg(value_name = "TEXT")]
     pub text: Vec<String>,
-    #[arg(short = 's', visible_short_alias = 'p', long)]
-    pub switch: bool,
+    /// Use the current task instead of picking one.
+    #[arg(short = 'c', long)]
+    pub current: bool,
     #[arg(short = 'w', long, value_name = "WHY")]
     pub why: Option<String>,
     #[arg(long)]

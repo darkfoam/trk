@@ -38,7 +38,7 @@ trk\-by(1)
 Goal by X: a direct task under the active goal
 .TP
 trk\-then(1)
-Once this is done, then X: wrap the current chain in a new parent
+Once this is done, then X: make X the parent of a picked task
 .TP
 trk\-and(1)
 And X: another task at the same level as the target

@@ -128,7 +128,7 @@ fn done_on_task_with_children_is_blocked() {
 }
 
 #[test]
-fn then_wraps_the_current_chain() {
+fn then_parents_the_target_directly() {
     let doc = goal_with_tree();
     let (next, _) = apply(
         &doc,
@@ -145,11 +145,15 @@ fn then_wraps_the_current_chain() {
     assert_eq!(wrap.text, "Wrap");
     assert_eq!(wrap.children.len(), 1);
     assert_eq!(
-        wrap.children[0].id, 1,
-        "the new task wraps the root of the target's chain"
+        wrap.children[0].id, 3,
+        "the new task becomes the direct parent of the target"
     );
-    // The whole original subtree is preserved under the new parent.
-    assert!(goal.find(1).unwrap().find(3).is_some());
+    // The new task is inserted where the target was, not at the root.
+    assert!(
+        goal.find(6).unwrap().find(7).is_some(),
+        "the new parent sits under the target's old parent"
+    );
+    assert!(goal.find(7).unwrap().find(3).is_some());
     // The unrelated root is untouched.
     assert_eq!(goal.roots.len(), 2);
     assert!(goal.roots.iter().any(|r| r.id == 4));

@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use assert_cmd::Command;
 use predicates::prelude::*;
 use tempfile::TempDir;
+use trk::store::format::parse;
 
 struct Env {
     dir: TempDir,
@@ -59,8 +60,14 @@ fn build_main_scenario(env: &Env) {
     ])
     .success();
     env.run(&["switch", "3"]).success();
-    env.run(&["then", "Document the process", "-w", "after the fix ships"])
-        .success();
+    env.run(&[
+        "then",
+        "-c",
+        "Document the process",
+        "-w",
+        "after the fix ships",
+    ])
+    .success();
 }
 
 #[test]
@@ -83,6 +90,9 @@ fn main_scenario_done_and_undo() {
 
     env.run(&["done"])
         .success()
+        .stdout(predicate::str::contains("back to: Document the process"));
+    env.run(&["done"])
+        .success()
         .stdout(predicate::str::contains("back to: Reproduce on staging"));
     env.run(&["done"])
         .success()
@@ -90,9 +100,6 @@ fn main_scenario_done_and_undo() {
     env.run(&["done"])
         .success()
         .stdout(predicate::str::contains("back to: Fix login bug"));
-    env.run(&["done"])
-        .success()
-        .stdout(predicate::str::contains("back to: Document the process"));
     env.run(&["done"])
         .success()
         .stdout(predicate::str::contains("next top-level task"));
@@ -124,7 +131,7 @@ fn blocked_done_exits_3_and_leaves_store_unchanged() {
 fn forced_done_marks_only_the_task() {
     let env = Env::new();
     build_main_scenario(&env);
-    env.run(&["switch", "2"]).success();
+    env.run(&["switch", "1"]).success();
     env.run(&["done", "-f"]).success();
     let text = fs::read_to_string(env.store()).unwrap();
     assert!(text.contains("[x] t1"), "{text}");
@@ -135,6 +142,63 @@ fn no_current_task_exits_4() {
     let env = Env::new();
     env.run(&["goal", "new", "Empty"]).success();
     env.run(&["done"]).code(4);
+}
+
+#[test]
+fn then_picks_the_target_from_stdin_without_a_terminal() {
+    let env = Env::new();
+    env.run(&["goal", "new", "G"]).success();
+    env.run(&["by", "first"]).success();
+    env.run(&["by", "second"]).success();
+    // No terminal: the picker lists tasks on stderr and reads the number from
+    // stdin, so "2" wraps the second task.
+    env.cmd()
+        .write_stdin("2\n")
+        .args(["then", "wrapped"])
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("second"));
+    env.run(&["list"])
+        .success()
+        .stdout(predicate::str::contains("wrapped"));
+}
+
+#[test]
+fn then_parents_the_picked_task_and_chains_on_the_newest() {
+    let env = Env::new();
+    env.run(&["goal", "new", "G"]).success();
+    env.run(&["by", "root"]).success();
+    env.run(&["by", "other"]).success();
+    // Pick "other" (number 2): X becomes its direct parent, not a new root.
+    env.cmd()
+        .write_stdin("2\n")
+        .args(["then", "X"])
+        .assert()
+        .success();
+    // Accept the default, which is the most recently created task (X), so Z
+    // wraps X and the chain grows.
+    env.cmd()
+        .write_stdin("\n")
+        .args(["then", "Z"])
+        .assert()
+        .success();
+    let text = fs::read_to_string(env.store()).unwrap();
+    let doc = parse(&text).unwrap();
+    let goal = doc.active_goal().unwrap();
+    // t1 root, t2 other, t3 X, t4 Z.
+    assert!(
+        goal.find(3).unwrap().find(2).is_some(),
+        "X wraps other:\n{text}"
+    );
+    assert!(
+        goal.find(4).unwrap().find(3).is_some(),
+        "Z wraps X:\n{text}"
+    );
+    assert_eq!(
+        goal.roots.len(),
+        2,
+        "only root and Z are top level:\n{text}"
+    );
 }
 
 #[test]
