@@ -371,11 +371,17 @@ fn inbox_take_switch_honours_the_flag() {
     env.run(&["goal", "new", "G"]).success();
     env.run(&["by", "root task"]).success();
     env.run(&["jot", "filed thing"]).success();
-    // With no terminal the picker cannot run, so -s must fail rather than
+    // With no terminal the picker prints its choices and reads the number from
+    // standard input, so -s must parent under the chosen task rather than
     // silently creating a root task.
-    env.run(&["inbox", "take", "1", "--goal", "G", "-s"])
-        .code(1)
-        .stderr(predicate::str::contains("picker"));
+    env.cmd()
+        .write_stdin("1\n")
+        .args(["inbox", "take", "1", "--goal", "G", "-s"])
+        .assert()
+        .success();
+    let text = fs::read_to_string(env.store()).unwrap();
+    assert!(text.contains("filed thing"), "{text}");
+    assert_eq!(text.matches("  [ ]").count(), 2, "{text}");
 }
 
 #[test]

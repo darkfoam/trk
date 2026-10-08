@@ -93,8 +93,35 @@ impl Ui for NullUi {
         Ok(None)
     }
 
-    fn pick(&mut self, _spec: &PickSpec) -> Result<PickResult, TrkError> {
-        Err(TrkError::Message("a picker needs a terminal".into()))
+    fn pick(&mut self, spec: &PickSpec) -> Result<PickResult, TrkError> {
+        if spec.rows.is_empty() {
+            return Err(TrkError::Message("nothing to switch to".into()));
+        }
+        let mut err = std::io::stderr();
+        writeln!(err, "{}", spec.header)?;
+        for row in &spec.rows {
+            writeln!(err, "{}", row.label)?;
+        }
+        write!(err, "pick: ")?;
+        err.flush()?;
+        let mut line = String::new();
+        let n = std::io::stdin().lock().read_line(&mut line)?;
+        if n == 0 {
+            return Ok(PickResult::Cancel);
+        }
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            let idx = spec.initial.min(spec.rows.len() - 1);
+            return Ok(PickResult::Chosen(spec.rows[idx].id));
+        }
+        let number: usize = trimmed
+            .parse()
+            .map_err(|_| TrkError::Usage("pick: enter a task number".into()))?;
+        spec.rows
+            .iter()
+            .find(|r| r.number == Some(number))
+            .map(|r| PickResult::Chosen(r.id))
+            .ok_or_else(|| TrkError::Usage(format!("pick: no task number {number}")))
     }
 
     fn is_interactive(&self) -> bool {

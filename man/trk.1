@@ -208,7 +208,10 @@ The option
 .B \-s
 (also spelled
 .BR \-p )
-chooses a target task in a picker, and is called out wherever it applies.
+chooses a target task in a picker, and is called out wherever it applies. When
+there is no terminal to draw the picker in, the numbered choices are printed to
+standard error and the number is read from standard input (an empty line accepts
+the highlighted default), so a pipeline can drive it too.
 .SS trk
 With no arguments,
 .B trk

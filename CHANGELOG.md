@@ -8,6 +8,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- Pickers now work without a terminal: when one cannot be drawn, the numbered
+  choices are printed to standard error and the number is read from standard
+  input (an empty line accepts the highlighted default), so `-s`/`--switch`
+  pickers can be driven from a script or pipeline.
+
 ## [0.2.1] - 2026-10-08
 
 ### Changed

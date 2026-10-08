@@ -169,7 +169,10 @@ Aliases: `d` done, `u` undo, `l` list, `n` note, `w` why, `s` stop, `g` goal,
 
 Useful flags: `-s/--switch` chooses a target in a picker; `-w <why>` supplies
 the why inline; `-n/--stay` keeps the cursor put; `-f/--force` overrides a
-blocked `done`/`drop`/`goal done`; `--no-why` skips the why prompt.
+blocked `done`/`drop`/`goal done`; `--no-why` skips the why prompt. Without a
+terminal a picker prints its numbered choices to stderr and reads the number
+from stdin (an empty line accepts the highlighted default), so it can be
+scripted.
 
 ## Configuration
 
