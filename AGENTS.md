@@ -15,6 +15,8 @@
 - `src/commands/` CLI dispatch and interactivity.
 - `src/tui/` `trk start` and the reusable picker.
 - `tests/` integration tests; `man/` hand-written man page; `xtask/` generators.
+- `scripts/` release packaging (`scripts/package-macos.sh` builds the macOS
+  `.pkg`/`.dmg`; run by the release workflow).
 
 ## Architecture rules that are easy to get wrong
 - Ops are pure: `(Doc, Request) -> Result<(Doc, Outcome), OpError>`. No I/O, no

@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- macOS `.dmg` installers (one per architecture) that install the `trk` binary,
+  its man page, and shell completions under `/usr/local` via a `.pkg`.
+
 ## [0.3.0] - 2026-10-08
 
 ### Added

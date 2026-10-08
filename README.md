@@ -17,7 +17,33 @@ git, and safe to back up with any tool.
 
 ## Install
 
-Build from source. The project targets stable Rust, edition 2024 (MSRV 1.89):
+### macOS
+
+Download `trk-<version>-macos-<arch>.dmg` from the
+[latest release](https://github.com/darkfoam/trk/releases/latest), open it, and
+run the installer. It installs the binary, man page, and shell completions under
+`/usr/local`, so `man trk` works.
+
+The installer is unsigned, so macOS warns about an unidentified developer:
+right-click the dmg and choose Open, or clear the quarantine flag first:
+
+```sh
+xattr -dr com.apple.quarantine ~/Downloads/trk-*-macos-*.dmg
+```
+
+Uninstall with:
+
+```sh
+sudo rm -f /usr/local/bin/trk /usr/local/share/man/man1/trk.1 \
+  /usr/local/share/zsh/site-functions/_trk \
+  /usr/local/share/bash-completion/completions/trk \
+  /usr/local/share/fish/vendor_completions.d/trk.fish
+sudo pkgutil --forget com.darkfoam.trk
+```
+
+### Build from source
+
+The project targets stable Rust, edition 2024 (MSRV 1.89):
 
 ```sh
 cargo build --release
