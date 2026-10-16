@@ -13,10 +13,13 @@
 - `src/store/` format parser/serializer, atomic writes, locking, undo ring.
 - `src/ui/` pure renderers returning `Vec<StyledLine>`, wrapping, styles.
 - `src/commands/` CLI dispatch and interactivity.
-- `src/tui/` `trk start` and the reusable picker.
+- `src/tui/` the reusable picker (used by `switch`, `drop`, `delete goal`, and
+  `inbox`).
 - `tests/` integration tests; `man/` hand-written man page; `xtask/` generators.
 - `scripts/` release packaging (`scripts/package-macos.sh` builds the macOS
-  `.pkg`/`.dmg`; run by the release workflow).
+  `.pkg`/`.dmg`; `scripts/install-local.sh` builds and installs the binary and
+  man page for the current user; the packaging script is run by the release
+  workflow).
 
 ## Architecture rules that are easy to get wrong
 - Ops are pure: `(Doc, Request) -> Result<(Doc, Outcome), OpError>`. No I/O, no
@@ -24,14 +27,13 @@
   behavior cannot drift.
 - Views are pure: `(&Doc, Width, Style) -> Vec<StyledLine>`; no printing.
 - No global mutable state; pass a `Ctx` (config, clock, paths) explicitly.
-- `thiserror` in library layers, `anyhow` only in `main`; map errors to exit
-  codes in one place.
+- `thiserror` in library layers; map errors to exit codes in one place.
 - Keep dependencies small; no async runtime, no database.
 
 ## Testing quirks
 - CLI integration tests use `TRK_STORE`, `TRK_CONFIG`, and `TRK_NOW` with temp
   dirs to make output deterministic. `TRK_NOW` is test-only.
-- Dev stack: `assert_cmd`, `predicates`, `tempfile`, `insta`, `proptest`.
+- Dev stack: `assert_cmd`, `predicates`, `tempfile`, `proptest`.
 - Coverage includes parser/serializer round-trip, view snapshots at widths
   40/60/80 plus ASCII symbols, CRLF parsing, concurrency, and exit codes with
   the stdout/stderr split.

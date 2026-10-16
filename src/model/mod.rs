@@ -63,6 +63,10 @@ pub struct Task {
     pub note: Vec<String>,
     pub stop_reason: Option<String>,
     pub at: Option<Schedule>,
+    /// Total time recorded against this task, in seconds.
+    pub spent: i64,
+    /// When the current timer was started, if one is running.
+    pub running: Option<DateTime<FixedOffset>>,
     pub children: Vec<Task>,
 }
 
@@ -76,6 +80,8 @@ impl Task {
             note: Vec::new(),
             stop_reason: None,
             at: None,
+            spent: 0,
+            running: None,
             children: Vec::new(),
         }
     }
@@ -156,10 +162,24 @@ pub struct Goal {
     pub status: GoalStatus,
     pub created: DateTime<FixedOffset>,
     pub cursor: Option<TaskId>,
+    /// The most recently added task; `then` and `and` anchor here.
+    pub last_added: Option<TaskId>,
     pub roots: Vec<Task>,
 }
 
 impl Goal {
+    pub fn new(id: GoalId, title: String, created: DateTime<FixedOffset>) -> Self {
+        Self {
+            id,
+            title,
+            status: GoalStatus::Open,
+            created,
+            cursor: None,
+            last_added: None,
+            roots: Vec::new(),
+        }
+    }
+
     pub fn is_open(&self) -> bool {
         matches!(self.status, GoalStatus::Open)
     }
@@ -306,6 +326,11 @@ impl Doc {
                         goal.id
                     ));
                 }
+            }
+            if let Some(last) = goal.last_added
+                && goal.find(last).is_none()
+            {
+                return Err(format!("g{}: last added t{last} does not exist", goal.id));
             }
         }
 

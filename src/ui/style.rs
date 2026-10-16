@@ -12,6 +12,8 @@ pub enum Role {
     Current,
     /// Any other task: faded green, so the current task pops.
     Task,
+    /// A completed or dropped task: dim and struck through.
+    Done,
     Warning,
     Error,
 }
@@ -226,6 +228,7 @@ fn ansi_for(role: Role, style: Style) -> AnsiStyle {
         Role::Task => AnsiStyle::new()
             .dimmed()
             .fg_color(Some(AnsiColor::Green.into())),
+        Role::Done => AnsiStyle::new().dimmed().strikethrough(),
         Role::Warning => AnsiStyle::new().fg_color(Some(Ansi256Color(208).into())),
         Role::Error => AnsiStyle::new().fg_color(Some(AnsiColor::Red.into())),
     }

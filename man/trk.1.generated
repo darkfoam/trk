@@ -1,6 +1,6 @@
 .ie \n(.g .ds Aq \(aq
 .el .ds Aq '
-.TH trk 1  "trk 0.2.1" 
+.TH trk 1  "trk 0.4.1" 
 .SH NAME
 trk \- adhd compliant task tracking
 .SH SYNOPSIS
@@ -32,75 +32,57 @@ Print version
 .SH SUBCOMMANDS
 .TP
 trk\-add(1)
-Add X: a new task under the current task; you descend
-.TP
-trk\-by(1)
-Goal by X: a direct task under the active goal
+Add a task under the goal
 .TP
 trk\-then(1)
-Once this is done, then X: make X the parent of a picked task
+Add a task as a parent of the most recently added task
 .TP
 trk\-and(1)
-And X: another task at the same level as the target
+Add a task as a sibling of the most recently added task
+.TP
+trk\-before(1)
+Add a task as a sibling before the most recently added task
 .TP
 trk\-done(1)
-Finish the current task and walk back up
+Complete the current task
 .TP
-trk\-drop(1)
-Abandon the current task
+trk\-time(1)
+Start timing the current task
 .TP
 trk\-stop(1)
-Leave the current task unfinished, with a reason
+Stop timing the current task
 .TP
-trk\-go(1)
-Resume the current task; show how I got here
-.TP
-trk\-why(1)
-Chain of notes from the root to the current task
-.TP
-trk\-note(1)
-Read or add note lines on a task
-.TP
-trk\-rename(1)
-Change a task\*(Aqs text
+trk\-drop(1)
+Delete a task, using the picker
 .TP
 trk\-switch(1)
-Switch to another task
+Switch tasks using the picker
 .TP
 trk\-list(1)
-The whole task tree of the active goal
+Show the current task, its siblings, and its parents
 .TP
 trk\-undo(1)
 Undo the last N changes
 .TP
-trk\-goal(1)
-Goals: show, list, new, switch, done, rename, reopen
+trk\-new(1)
+Create a goal
+.TP
+trk\-progress(1)
+Show the whole goal as a tree with progress
+.TP
+trk\-delete(1)
+Delete a goal and every task under it
 .TP
 trk\-jot(1)
-Quick capture to the inbox
+Capture a task in the inbox
 .TP
 trk\-inbox(1)
-View the inbox, take or drop items
+Open the inbox in the picker
 .TP
 trk\-log(1)
 What got finished, by day
 .TP
-trk\-at(1)
-Schedule a task
-.TP
-trk\-agenda(1)
-Scheduled tasks across all goals
-.TP
-trk\-start(1)
-Live task list in a terminal pane
-.TP
-trk\-config(1)
-Where the task list lives
-.TP
-trk\-prompt(1)
-One short line for a shell prompt
-.TP
 trk\-completions(1)
-Print shell completion script
+Install shell completions for the detected shell
 .SH VERSION
-v0.2.1
+v0.4.1

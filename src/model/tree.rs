@@ -109,3 +109,15 @@ pub fn unfinished_tasks(goal: &Goal) -> Vec<TaskId> {
     }
     out
 }
+
+/// Remove the task with `id` (and its whole subtree) from the goal, returning
+/// the removed task if it was found.
+pub fn remove(goal: &mut Goal, id: TaskId) -> Option<Task> {
+    let path = find_path(goal, id)?;
+    let (&last, parent_path) = path.split_last()?;
+    if parent_path.is_empty() {
+        return Some(goal.roots.remove(last));
+    }
+    let parent = task_at_mut(goal, parent_path)?;
+    Some(parent.children.remove(last))
+}

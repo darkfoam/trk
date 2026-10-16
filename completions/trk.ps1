@@ -26,74 +26,60 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('-V', '-V ', [CompletionResultType]::ParameterName, 'Print version')
             [CompletionResult]::new('--version', '--version', [CompletionResultType]::ParameterName, 'Print version')
-            [CompletionResult]::new('add', 'add', [CompletionResultType]::ParameterValue, 'Add X: a new task under the current task; you descend')
-            [CompletionResult]::new('by', 'by', [CompletionResultType]::ParameterValue, 'Goal by X: a direct task under the active goal')
-            [CompletionResult]::new('then', 'then', [CompletionResultType]::ParameterValue, 'Once this is done, then X: make X the parent of a picked task')
-            [CompletionResult]::new('and', 'and', [CompletionResultType]::ParameterValue, 'And X: another task at the same level as the target')
-            [CompletionResult]::new('done', 'done', [CompletionResultType]::ParameterValue, 'Finish the current task and walk back up')
-            [CompletionResult]::new('drop', 'drop', [CompletionResultType]::ParameterValue, 'Abandon the current task')
-            [CompletionResult]::new('stop', 'stop', [CompletionResultType]::ParameterValue, 'Leave the current task unfinished, with a reason')
-            [CompletionResult]::new('go', 'go', [CompletionResultType]::ParameterValue, 'Resume the current task; show how I got here')
-            [CompletionResult]::new('why', 'why', [CompletionResultType]::ParameterValue, 'Chain of notes from the root to the current task')
-            [CompletionResult]::new('note', 'note', [CompletionResultType]::ParameterValue, 'Read or add note lines on a task')
-            [CompletionResult]::new('rename', 'rename', [CompletionResultType]::ParameterValue, 'Change a task''s text')
-            [CompletionResult]::new('switch', 'switch', [CompletionResultType]::ParameterValue, 'Switch to another task')
-            [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'The whole task tree of the active goal')
+            [CompletionResult]::new('add', 'add', [CompletionResultType]::ParameterValue, 'Add a task under the goal')
+            [CompletionResult]::new('then', 'then', [CompletionResultType]::ParameterValue, 'Add a task as a parent of the most recently added task')
+            [CompletionResult]::new('and', 'and', [CompletionResultType]::ParameterValue, 'Add a task as a sibling of the most recently added task')
+            [CompletionResult]::new('before', 'before', [CompletionResultType]::ParameterValue, 'Add a task as a sibling before the most recently added task')
+            [CompletionResult]::new('done', 'done', [CompletionResultType]::ParameterValue, 'Complete the current task')
+            [CompletionResult]::new('time', 'time', [CompletionResultType]::ParameterValue, 'Start timing the current task')
+            [CompletionResult]::new('stop', 'stop', [CompletionResultType]::ParameterValue, 'Stop timing the current task')
+            [CompletionResult]::new('drop', 'drop', [CompletionResultType]::ParameterValue, 'Delete a task, using the picker')
+            [CompletionResult]::new('switch', 'switch', [CompletionResultType]::ParameterValue, 'Switch tasks using the picker')
+            [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'Show the current task, its siblings, and its parents')
             [CompletionResult]::new('undo', 'undo', [CompletionResultType]::ParameterValue, 'Undo the last N changes')
-            [CompletionResult]::new('goal', 'goal', [CompletionResultType]::ParameterValue, 'Goals: show, list, new, switch, done, rename, reopen')
-            [CompletionResult]::new('jot', 'jot', [CompletionResultType]::ParameterValue, 'Quick capture to the inbox')
-            [CompletionResult]::new('inbox', 'inbox', [CompletionResultType]::ParameterValue, 'View the inbox, take or drop items')
+            [CompletionResult]::new('new', 'new', [CompletionResultType]::ParameterValue, 'Create a goal')
+            [CompletionResult]::new('progress', 'progress', [CompletionResultType]::ParameterValue, 'Show the whole goal as a tree with progress')
+            [CompletionResult]::new('delete', 'delete', [CompletionResultType]::ParameterValue, 'Delete a goal and every task under it')
+            [CompletionResult]::new('jot', 'jot', [CompletionResultType]::ParameterValue, 'Capture a task in the inbox')
+            [CompletionResult]::new('inbox', 'inbox', [CompletionResultType]::ParameterValue, 'Open the inbox in the picker')
             [CompletionResult]::new('log', 'log', [CompletionResultType]::ParameterValue, 'What got finished, by day')
-            [CompletionResult]::new('at', 'at', [CompletionResultType]::ParameterValue, 'Schedule a task')
-            [CompletionResult]::new('agenda', 'agenda', [CompletionResultType]::ParameterValue, 'Scheduled tasks across all goals')
-            [CompletionResult]::new('start', 'start', [CompletionResultType]::ParameterValue, 'Live task list in a terminal pane')
-            [CompletionResult]::new('config', 'config', [CompletionResultType]::ParameterValue, 'Where the task list lives')
-            [CompletionResult]::new('prompt', 'prompt', [CompletionResultType]::ParameterValue, 'One short line for a shell prompt')
-            [CompletionResult]::new('completions', 'completions', [CompletionResultType]::ParameterValue, 'Print shell completion script')
+            [CompletionResult]::new('completions', 'completions', [CompletionResultType]::ParameterValue, 'Install shell completions for the detected shell')
             break
         }
         'trk;add' {
-            [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'Supply the why inline (skips the prompt)')
-            [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'Supply the why inline (skips the prompt)')
+            [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'Explain why this task exists (skips the prompt)')
+            [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'Explain why this task exists (skips the prompt)')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 'Switch to choose the parent task instead of using the current task')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 'Switch to choose the parent task instead of using the current task')
-            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'Switch to choose the parent task instead of using the current task')
-            [CompletionResult]::new('-n', '-n', [CompletionResultType]::ParameterName, 'Do not move the cursor onto the new task')
-            [CompletionResult]::new('--stay', '--stay', [CompletionResultType]::ParameterName, 'Do not move the cursor onto the new task')
             [CompletionResult]::new('--no-why', '--no-why', [CompletionResultType]::ParameterName, 'Do not ask for a why')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
-        'trk;by' {
-            [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'w')
-            [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'why')
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('--no-why', '--no-why', [CompletionResultType]::ParameterName, 'no-why')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
         'trk;then' {
-            [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'w')
-            [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'why')
+            [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'Explain why this task exists (skips the prompt)')
+            [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'Explain why this task exists (skips the prompt)')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-c', '-c', [CompletionResultType]::ParameterName, 'Use the current task instead of picking one')
-            [CompletionResult]::new('--current', '--current', [CompletionResultType]::ParameterName, 'Use the current task instead of picking one')
-            [CompletionResult]::new('--no-why', '--no-why', [CompletionResultType]::ParameterName, 'no-why')
+            [CompletionResult]::new('-n', '-n', [CompletionResultType]::ParameterName, 'Wrap the current task instead of the most recently added one')
+            [CompletionResult]::new('--next', '--next', [CompletionResultType]::ParameterName, 'Wrap the current task instead of the most recently added one')
+            [CompletionResult]::new('--no-why', '--no-why', [CompletionResultType]::ParameterName, 'Do not ask for a why')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
         'trk;and' {
-            [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'w')
-            [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'why')
+            [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'Explain why this task exists (skips the prompt)')
+            [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'Explain why this task exists (skips the prompt)')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
-            [CompletionResult]::new('--no-why', '--no-why', [CompletionResultType]::ParameterName, 'no-why')
+            [CompletionResult]::new('--no-why', '--no-why', [CompletionResultType]::ParameterName, 'Do not ask for a why')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
+            break
+        }
+        'trk;before' {
+            [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'Explain why this task exists (skips the prompt)')
+            [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'Explain why this task exists (skips the prompt)')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
+            [CompletionResult]::new('--no-why', '--no-why', [CompletionResultType]::ParameterName, 'Do not ask for a why')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
@@ -106,58 +92,22 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
-        'trk;drop' {
-            [CompletionResult]::new('-w', '-w', [CompletionResultType]::ParameterName, 'w')
-            [CompletionResult]::new('--why', '--why', [CompletionResultType]::ParameterName, 'why')
+        'trk;time' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-f', '-f', [CompletionResultType]::ParameterName, 'f')
-            [CompletionResult]::new('--force', '--force', [CompletionResultType]::ParameterName, 'force')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
         'trk;stop' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
-        'trk;go' {
+        'trk;drop' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;why' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;note' {
-            [CompletionResult]::new('-r', '-r', [CompletionResultType]::ParameterName, 'r')
-            [CompletionResult]::new('--replace', '--replace', [CompletionResultType]::ParameterName, 'replace')
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-c', '-c', [CompletionResultType]::ParameterName, 'c')
-            [CompletionResult]::new('--clear', '--clear', [CompletionResultType]::ParameterName, 'clear')
-            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;rename' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
+            [CompletionResult]::new('-y', '-y', [CompletionResultType]::ParameterName, 'Skip the confirmation prompt when the task has sub-tasks')
+            [CompletionResult]::new('--yes', '--yes', [CompletionResultType]::ParameterName, 'Skip the confirmation prompt when the task has sub-tasks')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
@@ -166,13 +116,24 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('goal', 'goal', [CompletionResultType]::ParameterValue, 'Switch goals using the picker')
+            break
+        }
+        'trk;switch;goal' {
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
         'trk;list' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-a', '-a', [CompletionResultType]::ParameterName, 'a')
-            [CompletionResult]::new('--all', '--all', [CompletionResultType]::ParameterName, 'all')
-            [CompletionResult]::new('--all-goals', '--all-goals', [CompletionResultType]::ParameterName, 'all-goals')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('goal', 'goal', [CompletionResultType]::ParameterValue, 'List all goals')
+            break
+        }
+        'trk;list;goal' {
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
@@ -183,61 +144,43 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
-        'trk;goal' {
+        'trk;new' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('show', 'show', [CompletionResultType]::ParameterValue, 'Print title, id, active marker, and counts')
-            [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'Numbered list of goals')
-            [CompletionResult]::new('new', 'new', [CompletionResultType]::ParameterValue, 'Create an open goal and make it active')
-            [CompletionResult]::new('switch', 'switch', [CompletionResultType]::ParameterValue, 'Make another open goal active')
-            [CompletionResult]::new('done', 'done', [CompletionResultType]::ParameterValue, 'Mark the active goal done')
-            [CompletionResult]::new('rename', 'rename', [CompletionResultType]::ParameterValue, 'Rename the active goal')
-            [CompletionResult]::new('reopen', 'reopen', [CompletionResultType]::ParameterValue, 'Reopen a done goal and make it active')
+            [CompletionResult]::new('goal', 'goal', [CompletionResultType]::ParameterValue, 'Create a new goal and make it active')
             break
         }
-        'trk;goal;show' {
+        'trk;new;goal' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
-        'trk;goal;list' {
+        'trk;progress' {
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('goal', 'goal', [CompletionResultType]::ParameterValue, 'All tasks in this goal as a single tree')
+            break
+        }
+        'trk;progress;goal' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
-        'trk;goal;new' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-n', '-n', [CompletionResultType]::ParameterName, 'n')
-            [CompletionResult]::new('--stay', '--stay', [CompletionResultType]::ParameterName, 'stay')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;goal;switch' {
+        'trk;delete' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('goal', 'goal', [CompletionResultType]::ParameterValue, 'Delete a goal and all of its tasks')
             break
         }
-        'trk;goal;done' {
+        'trk;delete;goal' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-f', '-f', [CompletionResultType]::ParameterName, 'f')
-            [CompletionResult]::new('--force', '--force', [CompletionResultType]::ParameterName, 'force')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;goal;rename' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;goal;reopen' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
+            [CompletionResult]::new('-y', '-y', [CompletionResultType]::ParameterName, 'Skip the confirmation prompt')
+            [CompletionResult]::new('--yes', '--yes', [CompletionResultType]::ParameterName, 'Skip the confirmation prompt')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
@@ -252,80 +195,9 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('take', 'take', [CompletionResultType]::ParameterValue, 'Take an item out of the inbox into a goal')
-            [CompletionResult]::new('drop', 'drop', [CompletionResultType]::ParameterValue, 'Drop an item from the inbox')
-            break
-        }
-        'trk;inbox;take' {
-            [CompletionResult]::new('--goal', '--goal', [CompletionResultType]::ParameterName, 'goal')
-            [CompletionResult]::new('--new-goal', '--new-goal', [CompletionResultType]::ParameterName, 'new-goal')
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 'Switch to choose the parent task instead of making a root')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 'Switch to choose the parent task instead of making a root')
-            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'Switch to choose the parent task instead of making a root')
-            [CompletionResult]::new('-a', '-a', [CompletionResultType]::ParameterName, 'Make the chosen goal active')
-            [CompletionResult]::new('--activate', '--activate', [CompletionResultType]::ParameterName, 'Make the chosen goal active')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;inbox;drop' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
         'trk;log' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;at' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-s', '-s', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('-p', '-p', [CompletionResultType]::ParameterName, 's')
-            [CompletionResult]::new('--switch', '--switch', [CompletionResultType]::ParameterName, 'switch')
-            [CompletionResult]::new('--clear', '--clear', [CompletionResultType]::ParameterName, 'Remove the schedule')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;agenda' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;start' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('--focus', '--focus', [CompletionResultType]::ParameterName, 'Start in focus view')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;config' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('show', 'show', [CompletionResultType]::ParameterValue, 'Print effective values')
-            [CompletionResult]::new('path', 'path', [CompletionResultType]::ParameterValue, 'Print only the config file path')
-            break
-        }
-        'trk;config;show' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;config;path' {
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
-            break
-        }
-        'trk;prompt' {
-            [CompletionResult]::new('--max', '--max', [CompletionResultType]::ParameterName, 'max')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')

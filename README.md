@@ -6,14 +6,12 @@
 
 > adhd compliant task tracking
 
-`trk` is a command-line tool for tracking what you are doing, and why, while
-your work branches into side quests. It targets rabbit holes: you start a task,
-discover you need another one, then another, and three hours later you cannot
-remember why you came here. `trk` keeps the chain.
+`trk` tracks what you are doing, and why, while your work branches into side
+quests. It targets rabbit holes: you start a task, discover you need another,
+then another, and three hours later you cannot remember why you came here.
 
-It is one binary and one plain-text file. No time tracking, no network, no
-accounts, no daemon. The file is human-readable, hand-editable, safe to keep in
-git, and safe to back up with any tool.
+It is one binary and one plain-text file. The file is human-readable,
+hand-editable, safe to keep in git, and safe to back up with any tool.
 
 ## Install
 
@@ -47,159 +45,115 @@ The project targets stable Rust, edition 2024 (MSRV 1.89):
 
 ```sh
 cargo build --release
-```
-
-The binary is at `target/release/trk`. Install it onto your `PATH`:
-
-```sh
 install -m 0755 target/release/trk ~/.local/bin/trk
 ```
 
-`~/.local/bin` is on `PATH` for most users on Linux and macOS. If it is not,
-add it:
-
-```sh
-# bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-# zsh
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
-# fish
-fish_add_path ~/.local/bin
-```
-
-Common alternatives on Unix-like systems:
-
-- **macOS**: `~/.local/bin`, or `/opt/homebrew/bin` (Apple Silicon) and
-  `/usr/local/bin` (Intel) if you use Homebrew.
-- **Linux**: `~/.local/bin` per user, or `/usr/local/bin` system-wide with
-  `sudo install -m 0755 target/release/trk /usr/local/bin/trk`.
-- **FreeBSD**: `/usr/local/bin` (the ports convention), or `~/.local/bin` per
-  user.
-
 `cargo install --path .` is also supported; it installs to `~/.cargo/bin`.
 
-Install the man page (optional):
+Or use the convenience script, which builds the release, installs the binary to
+`~/.local/bin`, installs the man page to `~/.local/share/man/man1`, and
+refreshes the `whatis` index (no `sudo`):
 
 ```sh
-install -d ~/.local/share/man/man1
-install -m 0644 man/trk.1 ~/.local/share/man/man1/trk.1
-man trk
+scripts/install-local.sh
 ```
+
+Override the destinations with `TRK_BIN_DIR` and `TRK_MAN_DIR` if you keep them
+elsewhere.
 
 Install shell completions (optional):
 
 ```sh
-trk completions bash > ~/.local/share/bash-completion/completions/trk
-trk completions zsh  > "${fpath[1]}/_trk"
-trk completions fish > ~/.config/fish/completions/trk.fish
+trk completions            # installs for your detected shell
 ```
 
 ## First run
 
 The first time you run a command that needs the store, `trk` asks where to keep
 your task list and its backups, then writes a config file. Press Enter to accept
-the defaults:
-
-```
-Where should trk keep your task list?
-(a plain text file; you can back it up or put it in git)
-path [~/.local/share/trk/tasks.trk]:
-
-Where should trk keep its backups of the task list?
-(undo snapshots; a folder, ideally somewhere you also back up)
-folder [~/.local/share/trk/backups]:
-```
-
-The first task you create in an empty store triggers a short walkthrough that
-asks `What *are* you working on?` and turns your answer into a goal.
-
-If you have no terminal (for example in a script), set `TRK_STORE` to skip the
-prompts, or create the config file by hand (see [Configuration](#configuration)).
+the defaults. If you have no terminal, set `TRK_STORE` to skip the prompts, or
+create the config file by hand (see [Configuration](#configuration)).
 
 ## Quick start
 
 ```sh
-trk goal new "Ship login fix"     # start a goal, named for the outcome
-trk by "Fix login bug" -w "customers locked out"
-trk add "Reproduce on staging"    # descend into what this needs
-trk                               # what am I doing, and why?
-trk done                          # finish and walk back up
-trk start                         # live list in a terminal pane
+trk new goal "Ship login fix"   # start a goal, named for the outcome
+trk add "Fix login bug"         # a top-level task under the goal
+trk then "Reproduce on staging" # a parent of what you just added
+trk and "Call internet company" # a sibling of what you just added
+trk list                        # where am I, and what surrounds me?
+trk time                        # start timing the current task
+trk done                        # finish it (and stop the timer)
+trk progress goal               # the whole goal as a tree
 ```
-
-`-w` records the why inline; without it, `trk` asks `why?`.
 
 ## How it works
 
 Work is a **tree of tasks under a goal**. One goal is active at a time, and it
-keeps its own **cursor**: the task you are currently on. Switching goals is
-cheap and resumes exactly where you left off. A task's children are the things
-needed to finish it, so the path from the goal down to your cursor is a literal
-list of reasons — the **why chain**.
+keeps its own **cursor**: the task you are currently on, plus a pointer to the
+**most recently added** task.
 
-Four moves cover almost everything that happens mid-work:
+Four commands add tasks, each relative to something already there:
 
-| Move | Meaning | Cursor |
+| Command | Adds | Relative to |
 |---|---|---|
-| `trk add X` | a child of the current task: "I need X to finish this" | descends |
-| `trk by X` | an unrelated top-level task: "also, X" | stays |
-| `trk and X` | a sibling right after the target: "and X, at this level" | stays |
-| `trk then X` | a new parent of a picked task: "then, X" | stays |
+| `trk add X` | a top-level task | the goal |
+| `trk then X` | a parent of the last task you added | the most recently added task (`-n` for the current one) |
+| `trk and X` | a sibling after the last task you added | the most recently added task |
+| `trk before X` | a sibling before the last task you added | the most recently added task |
 
-`add` records what you need *before* the current task; `then` records what
-happens *after* it. Repeated `then` grows a plan forward from the first step: the
-picker starts on the task you just added, so pressing Enter again wraps that new
-step, while your cursor stays put and `trk done` walks you back up one task at a
-time.
+So `add` starts a new line of work, `then` wraps the last task in a parent
+("first this, then that"), and `and`/`before` branch sideways. Because the most
+recently added task is remembered, they chain across commands — and if you
+realize a step was missing, `trk before X` slots it between the last two.
 
-A parent cannot be completed while it still has open descendants: `trk done`
-refuses, lists what is left, and exits 3 until you pass `--force`. `trk goal
-done` holds the same line for goals. This is the tool reminding you that "done"
-still has loose ends.
+`add`, `then`, `and`, and `before` each take an optional **why**: `-w <why>`
+supplies it inline, otherwise `trk` asks `why?` (press Enter for none, or pass
+`--no-why`). The why is shown under the task in `trk list` and
+`trk progress goal`.
 
-For the complete walkthrough — every command, its options, the file format, and
-a full worked session — see the man page (`man trk`) or
+`trk list` shows the current task, its siblings, and up to three of its parents,
+with a pointer at the current task. `trk progress goal` shows the entire tree,
+with completed tasks struck through. A parent cannot be completed while it still
+has open sub-tasks: `trk done` refuses and exits 3 until you pass `--force`.
+
+`trk time` records time against the current task; `trk stop` (or `trk done`)
+stops the timer, and totals show up in `trk progress goal` and `trk log`.
+
+For the complete walkthrough, see the man page (`man trk`) or
 `trk <command> --help`.
 
 ## Command reference
 
 | Command | What it does |
 |---|---|
-| `trk` | what am I doing, and why |
-| `trk add <text>` | new child of current task; descend |
-| `trk by <text>` | new top-level task; stay |
-| `trk then <text>` | new parent of a picked task (`-c` for current); stay |
-| `trk and <text>` | new sibling after target; stay |
-| `trk done` | finish current; walk back up |
-| `trk drop` | abandon current (reversible) |
-| `trk stop [reason]` | leave current unfinished, record why |
-| `trk go` | resume current; show how I got here |
-| `trk why` | chain of notes from the root to the current task |
-| `trk note [text]` | read or add note lines on a task |
-| `trk rename <text>` | change a task's text |
-| `trk switch [N]` | choose the current task |
-| `trk list` | the whole task tree of the active goal |
+| `trk` | the current-task context view |
+| `trk add <text>` | new top-level task under the goal |
+| `trk then [-n] <text>` | new parent of the most recently added task (`-n`: current task) |
+| `trk and <text>` | new sibling after the most recently added task |
+| `trk before <text>` | new sibling before the most recently added task |
+| `trk list` | current task, siblings, and up to three parents |
+| `trk switch` | choose the current task with the picker |
+| `trk done [-f]` | complete the current task; stop its timer |
+| `trk time` | start timing the current task |
+| `trk stop` | stop timing the current task |
+| `trk drop [-y]` | delete a task with the picker (`-y` if it has sub-tasks) |
 | `trk undo [N]` | undo the last N changes |
-| `trk goal ...` | show, list, new, switch, done, rename, reopen |
-| `trk jot <text>` | quick capture to the inbox |
-| `trk inbox ...` | view the inbox, take or drop items |
-| `trk log [when]` | what got finished, by day |
-| `trk at [when]` | schedule a task |
-| `trk agenda` | scheduled tasks across all goals |
-| `trk start` | live task list in a terminal pane |
-| `trk config ...` | where the task list lives |
-| `trk prompt` | one short line for a shell prompt |
-| `trk completions <shell>` | print a shell completion script |
+| `trk new goal [title]` | create a goal (prompts when the title is omitted) |
+| `trk list goal` | list every goal |
+| `trk switch goal` | choose the active goal with the picker |
+| `trk progress goal` | the whole goal as a tree, completed tasks struck through |
+| `trk delete goal [-y]` | delete a goal and its tasks (confirms, or `--yes`) |
+| `trk jot <text>` | capture a task in the inbox |
+| `trk inbox` | file inbox items with the picker (TAB creates a goal) |
+| `trk log [when]` | what got finished, by day, with time spent |
+| `trk completions [shell]` | install shell completions for your shell |
 
-Aliases: `d` done, `u` undo, `l` list, `n` note, `w` why, `s` stop, `g` goal,
-`i` jot.
+Aliases: `d` done, `l` list, `u` undo, `i` jot.
 
-Useful flags: `-s/--switch` chooses a target in a picker; `-c/--current` makes
-`then` target the current task instead of picking; `-w <why>` supplies the why
-inline; `-n/--stay` keeps the cursor put; `-f/--force` overrides a blocked
-`done`/`drop`/`goal done`; `--no-why` skips the why prompt. Without a terminal a
-picker prints its numbered choices to stderr and reads the number from stdin (an
-empty line accepts the highlighted default), so it can be scripted.
+Without a terminal a picker prints its numbered choices to stderr and reads the
+number from stdin (an empty line accepts the highlighted default), so it can be
+scripted.
 
 ## Configuration
 
@@ -209,13 +163,12 @@ The config file is TOML, found at `$TRK_CONFIG`, else
 ```toml
 store = "~/.local/share/trk/tasks.trk"
 backups = "~/.local/share/trk/backups"
-color = "auto"        # auto | always | never
-wrap = 80             # maximum output width in columns
-undo_depth = 50       # number of undo snapshots kept
-prompt_why = true     # ask "why?" when creating a task
-ascii = "auto"        # auto | always | never
+color = "auto"           # auto | always | never
+wrap = 80                # maximum output width in columns
+undo_depth = 50          # number of undo snapshots kept
+prompt_why = true        # ask "why?" when adding a task
+ascii = "auto"           # auto | always | never
 current_color = "green"  # color of the current task
-poll_ms = 500         # `trk start` change-detection interval
 ```
 
 Environment variables:
@@ -233,7 +186,7 @@ Exit codes: `0` success, `1` general error, `2` usage error, `3` blocked,
 
 The goal title is bold white. The current task is bold in `current_color`
 (default `green`). Every other task is faded green, so the current task pops.
-Done and dropped rows and notes are dim, warnings are orange, and errors are
+Completed tasks are dim and struck through, warnings are orange, and errors are
 red. Color is enabled automatically on a terminal; force it with
 `--color always` or `color = "always"`, and disable it with `--color never`,
 `color = "never"`, or by setting `NO_COLOR`.

@@ -16,11 +16,25 @@ pub struct PickSpec {
     pub header: String,
     pub rows: Vec<PickRow>,
     pub initial: usize,
+    /// Support TAB to create a new item (returns `PickResult::Create`).
+    pub allow_new: bool,
+}
+
+impl PickSpec {
+    pub fn new(header: impl Into<String>, rows: Vec<PickRow>, initial: usize) -> Self {
+        Self {
+            header: header.into(),
+            rows,
+            initial,
+            allow_new: false,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PickResult {
     Chosen(u64),
+    Create,
     Cancel,
 }
 
@@ -62,8 +76,8 @@ impl Ui for TerminalUi {
     }
 
     fn pick(&mut self, spec: &PickSpec) -> Result<PickResult, TrkError> {
-        if spec.rows.is_empty() {
-            return Err(TrkError::Message("nothing to switch to".into()));
+        if spec.rows.is_empty() && !spec.allow_new {
+            return Err(TrkError::Message("nothing to choose from".into()));
         }
         crate::tui::picker::run(spec, self.style)
     }
@@ -94,13 +108,16 @@ impl Ui for NullUi {
     }
 
     fn pick(&mut self, spec: &PickSpec) -> Result<PickResult, TrkError> {
-        if spec.rows.is_empty() {
-            return Err(TrkError::Message("nothing to switch to".into()));
+        if spec.rows.is_empty() && !spec.allow_new {
+            return Err(TrkError::Message("nothing to choose from".into()));
         }
         let mut err = std::io::stderr();
         writeln!(err, "{}", spec.header)?;
         for row in &spec.rows {
             writeln!(err, "{}", row.label)?;
+        }
+        if spec.allow_new {
+            writeln!(err, "n: new goal")?;
         }
         write!(err, "pick: ")?;
         err.flush()?;
@@ -111,17 +128,23 @@ impl Ui for NullUi {
         }
         let trimmed = line.trim();
         if trimmed.is_empty() {
+            if spec.rows.is_empty() {
+                return Ok(PickResult::Create);
+            }
             let idx = spec.initial.min(spec.rows.len() - 1);
             return Ok(PickResult::Chosen(spec.rows[idx].id));
         }
+        if spec.allow_new && trimmed.eq_ignore_ascii_case("n") {
+            return Ok(PickResult::Create);
+        }
         let number: usize = trimmed
             .parse()
-            .map_err(|_| TrkError::Usage("pick: enter a task number".into()))?;
+            .map_err(|_| TrkError::Usage("pick: enter a number".into()))?;
         spec.rows
             .iter()
             .find(|r| r.number == Some(number))
             .map(|r| PickResult::Chosen(r.id))
-            .ok_or_else(|| TrkError::Usage(format!("pick: no task number {number}")))
+            .ok_or_else(|| TrkError::Usage(format!("pick: no item number {number}")))
     }
 
     fn is_interactive(&self) -> bool {

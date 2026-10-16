@@ -23,70 +23,56 @@ set edit:completion:arg-completer[trk] = {|@words|
             cand --help 'Print help'
             cand -V 'Print version'
             cand --version 'Print version'
-            cand add 'Add X: a new task under the current task; you descend'
-            cand by 'Goal by X: a direct task under the active goal'
-            cand then 'Once this is done, then X: make X the parent of a picked task'
-            cand and 'And X: another task at the same level as the target'
-            cand done 'Finish the current task and walk back up'
-            cand drop 'Abandon the current task'
-            cand stop 'Leave the current task unfinished, with a reason'
-            cand go 'Resume the current task; show how I got here'
-            cand why 'Chain of notes from the root to the current task'
-            cand note 'Read or add note lines on a task'
-            cand rename 'Change a task''s text'
-            cand switch 'Switch to another task'
-            cand list 'The whole task tree of the active goal'
+            cand add 'Add a task under the goal'
+            cand then 'Add a task as a parent of the most recently added task'
+            cand and 'Add a task as a sibling of the most recently added task'
+            cand before 'Add a task as a sibling before the most recently added task'
+            cand done 'Complete the current task'
+            cand time 'Start timing the current task'
+            cand stop 'Stop timing the current task'
+            cand drop 'Delete a task, using the picker'
+            cand switch 'Switch tasks using the picker'
+            cand list 'Show the current task, its siblings, and its parents'
             cand undo 'Undo the last N changes'
-            cand goal 'Goals: show, list, new, switch, done, rename, reopen'
-            cand jot 'Quick capture to the inbox'
-            cand inbox 'View the inbox, take or drop items'
+            cand new 'Create a goal'
+            cand progress 'Show the whole goal as a tree with progress'
+            cand delete 'Delete a goal and every task under it'
+            cand jot 'Capture a task in the inbox'
+            cand inbox 'Open the inbox in the picker'
             cand log 'What got finished, by day'
-            cand at 'Schedule a task'
-            cand agenda 'Scheduled tasks across all goals'
-            cand start 'Live task list in a terminal pane'
-            cand config 'Where the task list lives'
-            cand prompt 'One short line for a shell prompt'
-            cand completions 'Print shell completion script'
+            cand completions 'Install shell completions for the detected shell'
         }
         &'trk;add'= {
-            cand -w 'Supply the why inline (skips the prompt)'
-            cand --why 'Supply the why inline (skips the prompt)'
+            cand -w 'Explain why this task exists (skips the prompt)'
+            cand --why 'Explain why this task exists (skips the prompt)'
             cand --color 'When to colorize output'
-            cand -s 'Switch to choose the parent task instead of using the current task'
-            cand -p 'Switch to choose the parent task instead of using the current task'
-            cand --switch 'Switch to choose the parent task instead of using the current task'
-            cand -n 'Do not move the cursor onto the new task'
-            cand --stay 'Do not move the cursor onto the new task'
             cand --no-why 'Do not ask for a why'
             cand -h 'Print help'
             cand --help 'Print help'
         }
-        &'trk;by'= {
-            cand -w 'w'
-            cand --why 'why'
-            cand --color 'When to colorize output'
-            cand --no-why 'no-why'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
         &'trk;then'= {
-            cand -w 'w'
-            cand --why 'why'
+            cand -w 'Explain why this task exists (skips the prompt)'
+            cand --why 'Explain why this task exists (skips the prompt)'
             cand --color 'When to colorize output'
-            cand -c 'Use the current task instead of picking one'
-            cand --current 'Use the current task instead of picking one'
-            cand --no-why 'no-why'
+            cand -n 'Wrap the current task instead of the most recently added one'
+            cand --next 'Wrap the current task instead of the most recently added one'
+            cand --no-why 'Do not ask for a why'
             cand -h 'Print help'
             cand --help 'Print help'
         }
         &'trk;and'= {
-            cand -w 'w'
-            cand --why 'why'
+            cand -w 'Explain why this task exists (skips the prompt)'
+            cand --why 'Explain why this task exists (skips the prompt)'
             cand --color 'When to colorize output'
-            cand -s 's'
-            cand -p 's'
-            cand --switch 'switch'
-            cand --no-why 'no-why'
+            cand --no-why 'Do not ask for a why'
+            cand -h 'Print help'
+            cand --help 'Print help'
+        }
+        &'trk;before'= {
+            cand -w 'Explain why this task exists (skips the prompt)'
+            cand --why 'Explain why this task exists (skips the prompt)'
+            cand --color 'When to colorize output'
+            cand --no-why 'Do not ask for a why'
             cand -h 'Print help'
             cand --help 'Print help'
         }
@@ -97,53 +83,20 @@ set edit:completion:arg-completer[trk] = {|@words|
             cand -h 'Print help'
             cand --help 'Print help'
         }
-        &'trk;drop'= {
-            cand -w 'w'
-            cand --why 'why'
+        &'trk;time'= {
             cand --color 'When to colorize output'
-            cand -f 'f'
-            cand --force 'force'
             cand -h 'Print help'
             cand --help 'Print help'
         }
         &'trk;stop'= {
             cand --color 'When to colorize output'
-            cand -s 's'
-            cand -p 's'
-            cand --switch 'switch'
             cand -h 'Print help'
             cand --help 'Print help'
         }
-        &'trk;go'= {
+        &'trk;drop'= {
             cand --color 'When to colorize output'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;why'= {
-            cand --color 'When to colorize output'
-            cand -s 's'
-            cand -p 's'
-            cand --switch 'switch'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;note'= {
-            cand -r 'r'
-            cand --replace 'replace'
-            cand --color 'When to colorize output'
-            cand -c 'c'
-            cand --clear 'clear'
-            cand -s 's'
-            cand -p 's'
-            cand --switch 'switch'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;rename'= {
-            cand --color 'When to colorize output'
-            cand -s 's'
-            cand -p 's'
-            cand --switch 'switch'
+            cand -y 'Skip the confirmation prompt when the task has sub-tasks'
+            cand --yes 'Skip the confirmation prompt when the task has sub-tasks'
             cand -h 'Print help'
             cand --help 'Print help'
         }
@@ -151,12 +104,21 @@ set edit:completion:arg-completer[trk] = {|@words|
             cand --color 'When to colorize output'
             cand -h 'Print help'
             cand --help 'Print help'
+            cand goal 'Switch goals using the picker'
+        }
+        &'trk;switch;goal'= {
+            cand --color 'When to colorize output'
+            cand -h 'Print help'
+            cand --help 'Print help'
         }
         &'trk;list'= {
             cand --color 'When to colorize output'
-            cand -a 'a'
-            cand --all 'all'
-            cand --all-goals 'all-goals'
+            cand -h 'Print help'
+            cand --help 'Print help'
+            cand goal 'List all goals'
+        }
+        &'trk;list;goal'= {
+            cand --color 'When to colorize output'
             cand -h 'Print help'
             cand --help 'Print help'
         }
@@ -165,54 +127,38 @@ set edit:completion:arg-completer[trk] = {|@words|
             cand -h 'Print help'
             cand --help 'Print help'
         }
-        &'trk;goal'= {
+        &'trk;new'= {
             cand --color 'When to colorize output'
             cand -h 'Print help'
             cand --help 'Print help'
-            cand show 'Print title, id, active marker, and counts'
-            cand list 'Numbered list of goals'
-            cand new 'Create an open goal and make it active'
-            cand switch 'Make another open goal active'
-            cand done 'Mark the active goal done'
-            cand rename 'Rename the active goal'
-            cand reopen 'Reopen a done goal and make it active'
+            cand goal 'Create a new goal and make it active'
         }
-        &'trk;goal;show'= {
+        &'trk;new;goal'= {
             cand --color 'When to colorize output'
             cand -h 'Print help'
             cand --help 'Print help'
         }
-        &'trk;goal;list'= {
+        &'trk;progress'= {
+            cand --color 'When to colorize output'
+            cand -h 'Print help'
+            cand --help 'Print help'
+            cand goal 'All tasks in this goal as a single tree'
+        }
+        &'trk;progress;goal'= {
             cand --color 'When to colorize output'
             cand -h 'Print help'
             cand --help 'Print help'
         }
-        &'trk;goal;new'= {
-            cand --color 'When to colorize output'
-            cand -n 'n'
-            cand --stay 'stay'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;goal;switch'= {
+        &'trk;delete'= {
             cand --color 'When to colorize output'
             cand -h 'Print help'
             cand --help 'Print help'
+            cand goal 'Delete a goal and all of its tasks'
         }
-        &'trk;goal;done'= {
+        &'trk;delete;goal'= {
             cand --color 'When to colorize output'
-            cand -f 'f'
-            cand --force 'force'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;goal;rename'= {
-            cand --color 'When to colorize output'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;goal;reopen'= {
-            cand --color 'When to colorize output'
+            cand -y 'Skip the confirmation prompt'
+            cand --yes 'Skip the confirmation prompt'
             cand -h 'Print help'
             cand --help 'Print help'
         }
@@ -225,70 +171,8 @@ set edit:completion:arg-completer[trk] = {|@words|
             cand --color 'When to colorize output'
             cand -h 'Print help'
             cand --help 'Print help'
-            cand take 'Take an item out of the inbox into a goal'
-            cand drop 'Drop an item from the inbox'
-        }
-        &'trk;inbox;take'= {
-            cand --goal 'goal'
-            cand --new-goal 'new-goal'
-            cand --color 'When to colorize output'
-            cand -s 'Switch to choose the parent task instead of making a root'
-            cand -p 'Switch to choose the parent task instead of making a root'
-            cand --switch 'Switch to choose the parent task instead of making a root'
-            cand -a 'Make the chosen goal active'
-            cand --activate 'Make the chosen goal active'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;inbox;drop'= {
-            cand --color 'When to colorize output'
-            cand -h 'Print help'
-            cand --help 'Print help'
         }
         &'trk;log'= {
-            cand --color 'When to colorize output'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;at'= {
-            cand --color 'When to colorize output'
-            cand -s 's'
-            cand -p 's'
-            cand --switch 'switch'
-            cand --clear 'Remove the schedule'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;agenda'= {
-            cand --color 'When to colorize output'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;start'= {
-            cand --color 'When to colorize output'
-            cand --focus 'Start in focus view'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;config'= {
-            cand --color 'When to colorize output'
-            cand -h 'Print help'
-            cand --help 'Print help'
-            cand show 'Print effective values'
-            cand path 'Print only the config file path'
-        }
-        &'trk;config;show'= {
-            cand --color 'When to colorize output'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;config;path'= {
-            cand --color 'When to colorize output'
-            cand -h 'Print help'
-            cand --help 'Print help'
-        }
-        &'trk;prompt'= {
-            cand --max 'max'
             cand --color 'When to colorize output'
             cand -h 'Print help'
             cand --help 'Print help'

@@ -1,4 +1,4 @@
-//! CLI integration tests using `assert_cmd` (spec 12.5, 13).
+//! CLI integration tests using `assert_cmd`.
 
 use std::fs;
 use std::path::PathBuf;
@@ -38,179 +38,327 @@ impl Env {
         cmd.args(args);
         cmd.assert()
     }
-}
 
-fn build_main_scenario(env: &Env) {
-    env.run(&["goal", "new", "Ship login fix"]).success();
-    env.run(&["by", "Fix login bug", "-w", "customers locked out"])
-        .success();
-    env.run(&["add", "Reproduce on staging", "-w", "need a failing case"])
-        .success();
-    env.run(&["add", "Get staging creds", "-w", "can't log in"])
-        .success();
-    env.run(&["by", "Call internet company", "-w", "wifi flaky"])
-        .success();
-    env.run(&["switch", "1"]).success();
-    env.run(&[
-        "add",
-        "-n",
-        "Check auth logs",
-        "-w",
-        "might explain the 401s",
-    ])
-    .success();
-    env.run(&["switch", "3"]).success();
-    env.run(&[
-        "then",
-        "-c",
-        "Document the process",
-        "-w",
-        "after the fix ships",
-    ])
-    .success();
+    fn doc(&self) -> trk::model::Doc {
+        parse(&fs::read_to_string(self.store()).unwrap()).unwrap()
+    }
 }
 
 #[test]
-fn main_scenario_steps_1_to_7_produce_golden_fixture() {
+fn add_then_and_build_a_tree() {
     let env = Env::new();
-    build_main_scenario(&env);
-    let text = fs::read_to_string(env.store())
-        .unwrap()
-        .replace("\r\n", "\n");
-    let golden = std::fs::read_to_string("tests/fixtures/step7.trk")
-        .unwrap()
-        .replace("\r\n", "\n");
-    assert_eq!(text, golden);
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "a"]).success();
+    env.run(&["then", "b"]).success();
+    env.run(&["and", "c"]).success();
+
+    let doc = env.doc();
+    let goal = doc.active_goal().unwrap();
+    // t1 "a" is under t2 "b"; t3 "c" is a sibling of b.
+    assert!(goal.find(2).unwrap().find(1).is_some());
+    assert_eq!(goal.roots.len(), 2);
+    assert_eq!(goal.roots[0].id, 2);
+    assert_eq!(goal.roots[1].id, 3);
+    assert_eq!(goal.last_added, Some(3));
 }
 
 #[test]
-fn main_scenario_done_and_undo() {
+fn then_next_wraps_the_current_task() {
     let env = Env::new();
-    build_main_scenario(&env);
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "a"]).success();
+    // The cursor stays on "a"; -n wraps the current task.
+    env.run(&["then", "-n", "d"]).success();
 
-    env.run(&["done"])
-        .success()
-        .stdout(predicate::str::contains("back to: Document the process"));
-    env.run(&["done"])
-        .success()
-        .stdout(predicate::str::contains("back to: Reproduce on staging"));
-    env.run(&["done"])
-        .success()
-        .stdout(predicate::str::contains("next: Check auth logs"));
-    env.run(&["done"])
-        .success()
-        .stdout(predicate::str::contains("back to: Fix login bug"));
-    env.run(&["done"])
-        .success()
-        .stdout(predicate::str::contains("next top-level task"));
-    env.run(&["done"])
-        .success()
-        .stdout(predicate::str::contains("goal has no open tasks"));
+    let doc = env.doc();
+    let goal = doc.active_goal().unwrap();
+    assert_eq!(goal.cursor, Some(1));
+    assert_eq!(goal.roots[0].id, 2);
+    assert!(goal.find(2).unwrap().find(1).is_some());
+}
 
-    env.run(&["undo"])
+#[test]
+fn list_shows_the_current_context() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "root"]).success();
+    env.run(&["then", "parent"]).success();
+    env.run(&["list"])
         .success()
-        .stdout(predicate::str::contains("undid: done"))
-        .stdout(predicate::str::contains("Call internet company"));
+        .stdout(predicate::str::contains("parent"))
+        .stdout(predicate::str::contains("root"))
+        .stdout(predicate::str::contains(">"));
+}
+
+#[test]
+fn add_records_the_why() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "ship it", "-w", "because reasons"])
+        .success()
+        .stdout(predicate::str::contains("why: because reasons"));
+    let task = env.doc().active_goal().unwrap().find(1).cloned().unwrap();
+    assert_eq!(task.note, vec!["because reasons".to_string()]);
+}
+
+#[test]
+fn before_inserts_between_tasks() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "a"]).success();
+    env.run(&["add", "b"]).success();
+    env.run(&["before", "c"]).success();
+    let doc = env.doc();
+    let goal = doc.active_goal().unwrap();
+    let texts: Vec<&str> = goal.roots.iter().map(|t| t.text.as_str()).collect();
+    assert_eq!(texts, vec!["a", "c", "b"]);
+}
+
+#[test]
+fn drop_with_subtasks_needs_confirmation() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "child"]).success();
+    env.run(&["then", "parent"]).success();
+    // Row 1 is the parent, which still has the "child" sub-task.
+    env.cmd()
+        .write_stdin("1\n")
+        .args(["drop"])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("--yes"));
+    assert_eq!(env.doc().active_goal().unwrap().roots.len(), 1);
+}
+
+#[test]
+fn drop_with_yes_deletes_the_subtree() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "child"]).success();
+    env.run(&["then", "parent"]).success();
+    env.cmd()
+        .write_stdin("1\n")
+        .args(["drop", "--yes"])
+        .assert()
+        .success();
+    let doc = env.doc();
+    let goal = doc.active_goal().unwrap();
+    assert!(goal.find(1).is_none(), "child gone");
+    assert!(goal.find(2).is_none(), "parent gone");
+}
+
+#[test]
+fn done_completes_the_current_task() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "finish me"]).success();
+    env.run(&["done"]).success();
+    let doc = env.doc();
+    assert!(doc.active_goal().unwrap().find(1).unwrap().state.is_done());
+}
+
+#[test]
+fn time_and_stop_accumulate() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "timed"]).success();
+
+    let mut start = env.cmd();
+    start
+        .env("TRK_NOW", "2026-10-07T10:00:00-05:00")
+        .args(["time"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("timing"));
+
+    let mut stop = env.cmd();
+    stop.env("TRK_NOW", "2026-10-07T10:05:00-05:00")
+        .args(["stop"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("stopped"));
+
+    let task = &env.doc().active_goal().unwrap().find(1).cloned().unwrap();
+    assert_eq!(task.spent, 300);
+    assert!(task.running.is_none());
+}
+
+#[test]
+fn stop_without_a_timer_exits_4() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "idle"]).success();
+    env.run(&["stop"]).code(4);
+}
+
+#[test]
+fn drop_deletes_the_picked_task() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "keep"]).success();
+    env.run(&["add", "delete me"]).success();
+    env.cmd()
+        .write_stdin("2\n")
+        .args(["drop"])
+        .assert()
+        .success();
+    let doc = env.doc();
+    let goal = doc.active_goal().unwrap();
+    assert!(goal.find(1).is_some());
+    assert!(goal.find(2).is_none(), "t2 removed");
+}
+
+#[test]
+fn switch_uses_the_picker() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "one"]).success();
+    env.run(&["add", "two"]).success();
+    env.cmd()
+        .write_stdin("2\n")
+        .args(["switch"])
+        .assert()
+        .success();
+    assert_eq!(env.doc().active_goal().unwrap().cursor, Some(2));
+}
+
+#[test]
+fn switch_goal_uses_the_picker() {
+    let env = Env::new();
+    env.run(&["new", "goal", "A"]).success();
+    env.run(&["new", "goal", "B"]).success();
+    env.cmd()
+        .write_stdin("1\n")
+        .args(["switch", "goal"])
+        .assert()
+        .success();
+    assert_eq!(env.doc().active, Some(1));
+}
+
+#[test]
+fn new_goal_without_a_title_needs_a_terminal() {
+    let env = Env::new();
+    env.run(&["new", "goal"]).code(2);
+}
+
+#[test]
+fn list_goal_numbers_every_goal() {
+    let env = Env::new();
+    env.run(&["new", "goal", "One"]).success();
+    env.run(&["new", "goal", "Two"]).success();
+    env.run(&["list", "goal"])
+        .success()
+        .stdout(predicate::str::contains("One"))
+        .stdout(predicate::str::contains("Two"));
+}
+
+#[test]
+fn progress_shows_the_whole_tree() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "child"]).success();
+    env.run(&["then", "parent"]).success();
+    env.run(&["progress", "goal"])
+        .success()
+        .stdout(predicate::str::contains("parent"))
+        .stdout(predicate::str::contains("child"));
+}
+
+#[test]
+fn delete_goal_removes_it_and_its_tasks() {
+    let env = Env::new();
+    env.run(&["new", "goal", "A"]).success();
+    env.run(&["add", "a task"]).success();
+    env.run(&["new", "goal", "B"]).success();
+    env.cmd()
+        .write_stdin("1\n")
+        .args(["delete", "goal", "--yes"])
+        .assert()
+        .success();
+    let doc = env.doc();
+    assert_eq!(doc.goals.len(), 1);
+    assert_eq!(doc.goals[0].title, "B");
+}
+
+#[test]
+fn delete_goal_without_yes_needs_a_terminal() {
+    let env = Env::new();
+    env.run(&["new", "goal", "A"]).success();
+    env.cmd()
+        .write_stdin("1\n")
+        .args(["delete", "goal"])
+        .assert()
+        .code(2);
 }
 
 #[test]
 fn blocked_done_exits_3_and_leaves_store_unchanged() {
     let env = Env::new();
-    build_main_scenario(&env);
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "child"]).success();
+    env.run(&["then", "parent"]).success();
+    // Switch to the parent, which still has an open child.
+    env.cmd()
+        .write_stdin("1\n")
+        .args(["switch"])
+        .assert()
+        .success();
     let before = fs::read_to_string(env.store()).unwrap();
-    env.run(&["switch", "2"]).success();
-    let before_pick = fs::read_to_string(env.store()).unwrap();
-    let _ = before;
     env.run(&["done"])
         .code(3)
         .stderr(predicate::str::contains("open sub-tasks"));
-    assert_eq!(fs::read_to_string(env.store()).unwrap(), before_pick);
+    assert_eq!(fs::read_to_string(env.store()).unwrap(), before);
 }
 
 #[test]
-fn forced_done_marks_only_the_task() {
+fn done_without_a_current_task_exits_4() {
     let env = Env::new();
-    build_main_scenario(&env);
-    env.run(&["switch", "1"]).success();
-    env.run(&["done", "-f"]).success();
-    let text = fs::read_to_string(env.store()).unwrap();
-    assert!(text.contains("[x] t1"), "{text}");
-}
-
-#[test]
-fn no_current_task_exits_4() {
-    let env = Env::new();
-    env.run(&["goal", "new", "Empty"]).success();
+    env.run(&["new", "goal", "Empty"]).success();
     env.run(&["done"]).code(4);
 }
 
 #[test]
-fn then_picks_the_target_from_stdin_without_a_terminal() {
+fn jot_and_inbox_drill_down() {
     let env = Env::new();
-    env.run(&["goal", "new", "G"]).success();
-    env.run(&["by", "first"]).success();
-    env.run(&["by", "second"]).success();
-    // No terminal: the picker lists tasks on stderr and reads the number from
-    // stdin, so "2" wraps the second task.
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "root"]).success();
+    env.run(&["jot", "file me"]).success();
+    // item 1, goal 1, then insert as a child of the "root" task (row 2).
     env.cmd()
-        .write_stdin("2\n")
-        .args(["then", "wrapped"])
-        .assert()
-        .success()
-        .stderr(predicate::str::contains("second"));
-    env.run(&["list"])
-        .success()
-        .stdout(predicate::str::contains("wrapped"));
-}
-
-#[test]
-fn then_parents_the_picked_task_and_chains_on_the_newest() {
-    let env = Env::new();
-    env.run(&["goal", "new", "G"]).success();
-    env.run(&["by", "root"]).success();
-    env.run(&["by", "other"]).success();
-    // Pick "other" (number 2): X becomes its direct parent, not a new root.
-    env.cmd()
-        .write_stdin("2\n")
-        .args(["then", "X"])
+        .write_stdin("1\n1\n2\n")
+        .args(["inbox"])
         .assert()
         .success();
-    // Accept the default, which is the most recently created task (X), so Z
-    // wraps X and the chain grows.
-    env.cmd()
-        .write_stdin("\n")
-        .args(["then", "Z"])
-        .assert()
-        .success();
-    let text = fs::read_to_string(env.store()).unwrap();
-    let doc = parse(&text).unwrap();
+    let doc = env.doc();
     let goal = doc.active_goal().unwrap();
-    // t1 root, t2 other, t3 X, t4 Z.
     assert!(
-        goal.find(3).unwrap().find(2).is_some(),
-        "X wraps other:\n{text}"
-    );
-    assert!(
-        goal.find(4).unwrap().find(3).is_some(),
-        "Z wraps X:\n{text}"
-    );
-    assert_eq!(
-        goal.roots.len(),
-        2,
-        "only root and Z are top level:\n{text}"
+        goal.find(1).unwrap().find(2).is_some(),
+        "the item became a child of root"
     );
 }
 
 #[test]
-fn non_tty_need_creates_task_without_prompt() {
+fn log_shows_completed_task() {
     let env = Env::new();
-    env.run(&["goal", "new", "G"]).success();
-    let mut cmd = env.cmd();
-    cmd.write_stdin("")
-        .args(["add", "do the thing"])
-        .assert()
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "Write repro steps"]).success();
+    env.run(&["done"]).success();
+    env.run(&["log"])
         .success()
-        .stdout(predicate::str::contains("do the thing"));
+        .stdout(predicate::str::contains("Write repro steps"))
+        .stdout(predicate::str::contains("done"));
+}
+
+#[test]
+fn undo_restores_the_previous_store() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "one"]).success();
+    env.run(&["add", "two"]).success();
+    env.run(&["undo"])
+        .success()
+        .stdout(predicate::str::contains("undid: add"));
+    assert_eq!(env.doc().active_goal().unwrap().roots.len(), 1);
 }
 
 #[test]
@@ -227,7 +375,7 @@ fn parse_error_exits_1_and_leaves_file_untouched() {
 #[test]
 fn no_color_emits_no_ansi() {
     let env = Env::new();
-    env.run(&["goal", "new", "G"]).success();
+    env.run(&["new", "goal", "G"]).success();
     let output = env
         .cmd()
         .env("NO_COLOR", "1")
@@ -245,129 +393,6 @@ fn unknown_subcommand_exits_2() {
 }
 
 #[test]
-fn jot_and_inbox_round_trip() {
-    let env = Env::new();
-    env.run(&["jot", "look into wal mode"])
-        .success()
-        .stdout(predicate::str::contains("jotted"));
-    env.run(&["inbox"])
-        .success()
-        .stdout(predicate::str::contains("look into wal mode"));
-}
-
-#[test]
-fn prompt_prints_nothing_without_goal() {
-    let env = Env::new();
-    env.run(&["prompt"])
-        .success()
-        .stdout(predicate::str::is_empty());
-}
-
-#[test]
-fn goals_keep_their_own_cursor() {
-    let env = Env::new();
-    env.run(&["goal", "new", "One"]).success();
-    env.run(&["by", "one task"]).success();
-    env.run(&["goal", "new", "Two"]).success();
-    env.run(&["by", "two task"]).success();
-    env.run(&["goal", "switch", "1"])
-        .success()
-        .stdout(predicate::str::contains("one task"));
-    env.run(&["goal", "switch", "2"])
-        .success()
-        .stdout(predicate::str::contains("two task"));
-}
-
-#[test]
-fn config_show_and_path() {
-    let env = Env::new();
-    let config = format!(
-        "store = {:?}\nbackups = {:?}\nwrap = 50\n",
-        env.store().to_string_lossy(),
-        env.dir.path().join("backups").to_string_lossy()
-    );
-    fs::write(env.dir.path().join("config.toml"), config).unwrap();
-    env.run(&["config", "show"])
-        .success()
-        .stdout(predicate::str::contains("wrap:    50"));
-    env.run(&["config", "path"])
-        .success()
-        .stdout(predicate::str::contains("config.toml"));
-}
-
-#[test]
-fn at_schedules_and_agenda_lists() {
-    let env = Env::new();
-    env.run(&["goal", "new", "G"]).success();
-    env.run(&["by", "Renew domain"]).success();
-    env.run(&["at", "2026-10-09"]).success();
-    env.run(&["agenda"])
-        .success()
-        .stdout(predicate::str::contains("Renew domain"))
-        .stdout(predicate::str::contains("2026-10-09"));
-}
-
-#[test]
-fn at_parses_relative_and_time() {
-    let env = Env::new();
-    env.run(&["goal", "new", "G"]).success();
-    env.run(&["by", "task"]).success();
-    env.run(&["at", "tomorrow", "3pm"]).success();
-    let text = fs::read_to_string(env.store()).unwrap();
-    assert!(text.contains("@ at=2026-10-08T15:00:00-05:00"), "{text}");
-}
-
-#[test]
-fn at_rejects_bad_grammar_with_exit_2() {
-    let env = Env::new();
-    env.run(&["goal", "new", "G"]).success();
-    env.run(&["by", "task"]).success();
-    env.run(&["at", "whenever"]).code(2);
-}
-
-#[test]
-fn log_shows_completed_task() {
-    let env = Env::new();
-    env.run(&["goal", "new", "G"]).success();
-    env.run(&["by", "Write repro steps"]).success();
-    env.run(&["done"]).success();
-    env.run(&["log"])
-        .success()
-        .stdout(predicate::str::contains("Write repro steps"))
-        .stdout(predicate::str::contains("done"));
-}
-
-#[test]
-fn inbox_take_new_goal_creates_goal_and_task() {
-    let env = Env::new();
-    env.run(&["jot", "look into wal mode"]).success();
-    env.run(&["inbox", "take", "1", "--new-goal", "New Goal"])
-        .success();
-    let text = fs::read_to_string(env.store()).unwrap();
-    assert!(text.contains("New Goal"), "{text}");
-    assert!(text.contains("look into wal mode"), "{text}");
-    assert!(!text.contains("inbox"), "inbox emptied: {text}");
-}
-
-#[test]
-fn prompt_prints_current_task() {
-    let env = Env::new();
-    env.run(&["goal", "new", "G"]).success();
-    env.run(&["by", "ship it"]).success();
-    env.run(&["prompt"])
-        .success()
-        .stdout(predicate::str::contains("ship it"));
-}
-
-#[test]
-fn completions_emit_script() {
-    let env = Env::new();
-    env.run(&["completions", "bash"])
-        .success()
-        .stdout(predicate::str::contains("trk"));
-}
-
-#[test]
 fn wrap_config_limits_output_width() {
     let env = Env::new();
     let config = format!(
@@ -376,9 +401,9 @@ fn wrap_config_limits_output_width() {
         env.dir.path().join("backups").to_string_lossy()
     );
     fs::write(env.dir.path().join("config.toml"), config).unwrap();
-    env.run(&["goal", "new", "G"]).success();
+    env.run(&["new", "goal", "G"]).success();
     let long = "word ".repeat(40);
-    env.run(&["by", &long]).success();
+    env.run(&["add", &long]).success();
     let output = env.cmd().output().unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
     for line in stdout.lines() {
@@ -389,69 +414,46 @@ fn wrap_config_limits_output_width() {
     }
 }
 
+#[cfg(unix)]
 #[test]
-fn agenda_shows_todays_upcoming_task() {
-    // TRK_NOW pins "now" to 09:00, so 23:00 today is still upcoming and must
-    // appear under Today rather than being dropped.
+fn completions_install_for_the_detected_shell() {
     let env = Env::new();
-    env.run(&["goal", "new", "G"]).success();
-    env.run(&["by", "Later today"]).success();
-    env.run(&["at", "23:00"]).success();
-    env.run(&["agenda"])
-        .success()
-        .stdout(predicate::str::contains("Today"))
-        .stdout(predicate::str::contains("Later today"))
-        .stdout(predicate::str::contains("23:00"));
-}
-
-#[test]
-fn goal_switch_and_reopen_share_goal_list_numbers() {
-    let env = Env::new();
-    env.run(&["goal", "new", "One"]).success();
-    env.run(&["by", "one task"]).success();
-    env.run(&["done"]).success();
-    env.run(&["goal", "done"]).success();
-    env.run(&["goal", "new", "Two"]).success();
-    env.run(&["by", "two task"]).success();
-
-    // g1 is done and g2 is open; `goal list` numbers both from 1.
-    env.run(&["goal", "list"])
-        .success()
-        .stdout(predicate::str::contains("(done)"));
-    // switch refuses the done goal's number, reopen accepts it.
-    env.run(&["goal", "switch", "1"]).code(2);
-    env.run(&["goal", "reopen", "1"])
-        .success()
-        .stdout(predicate::str::contains("One"));
-    // switching to the open goal's number still works.
-    env.run(&["goal", "switch", "2"])
-        .success()
-        .stdout(predicate::str::contains("two task"));
-}
-
-#[test]
-fn inbox_take_switch_honours_the_flag() {
-    let env = Env::new();
-    env.run(&["goal", "new", "G"]).success();
-    env.run(&["by", "root task"]).success();
-    env.run(&["jot", "filed thing"]).success();
-    // With no terminal the picker prints its choices and reads the number from
-    // standard input, so -s must parent under the chosen task rather than
-    // silently creating a root task.
+    let home = env.dir.path().join("home");
+    fs::create_dir_all(&home).unwrap();
     env.cmd()
-        .write_stdin("1\n")
-        .args(["inbox", "take", "1", "--goal", "G", "-s"])
+        .env("HOME", &home)
+        .env("SHELL", "/bin/zsh")
+        .arg("completions")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("zsh completions"));
+    assert!(home.join(".zfunc/_trk").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn completions_accept_an_explicit_shell() {
+    let env = Env::new();
+    let home = env.dir.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    env.cmd()
+        .env("HOME", &home)
+        .env_remove("SHELL")
+        .args(["completions", "bash"])
         .assert()
         .success();
-    let text = fs::read_to_string(env.store()).unwrap();
-    assert!(text.contains("filed thing"), "{text}");
-    assert_eq!(text.matches("  [ ]").count(), 2, "{text}");
+    assert!(
+        home.join(".local/share/bash-completion/completions/trk")
+            .exists()
+    );
 }
 
 #[test]
-fn inbox_take_switch_needs_an_existing_goal() {
+fn completions_without_a_shell_is_a_usage_error() {
     let env = Env::new();
-    env.run(&["jot", "thing"]).success();
-    env.run(&["inbox", "take", "1", "--new-goal", "X", "-s"])
+    env.cmd()
+        .env_remove("SHELL")
+        .arg("completions")
+        .assert()
         .code(2);
 }

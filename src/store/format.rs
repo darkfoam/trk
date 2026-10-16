@@ -187,6 +187,7 @@ fn parse_goal(lines: &[&str], first_no: usize) -> Result<(Goal, usize), ParseErr
         status: GoalStatus::Open,
         created,
         cursor: None,
+        last_added: None,
         roots: Vec::new(),
     };
 
@@ -213,6 +214,8 @@ fn parse_goal(lines: &[&str], first_no: usize) -> Result<(Goal, usize), ParseErr
     for raw in body {
         if raw.indent == 2 && raw.content.starts_with("current ") {
             goal.cursor = Some(parse_task_id(&raw.content["current ".len()..], raw.no)?);
+        } else if raw.indent == 2 && raw.content.starts_with("last ") {
+            goal.last_added = Some(parse_task_id(&raw.content["last ".len()..], raw.no)?);
         } else if raw.indent == 2 && raw.content.starts_with("@ ") {
             for (key, value) in parse_attrs(&raw.content[2..], raw.no)? {
                 match key.as_str() {
@@ -345,6 +348,8 @@ fn parse_task_header(content: &str, no: usize) -> Result<(Task, PendingState), P
         note: Vec::new(),
         stop_reason: None,
         at: None,
+        spent: 0,
+        running: None,
         children: Vec::new(),
     };
     Ok((task, state))
@@ -369,6 +374,14 @@ fn apply_task_attrs(task: &mut Task, attrs: &str, no: usize) -> Result<(), Parse
             }
             "at" => {
                 task.at = Some(parse_schedule(&value, no)?);
+            }
+            "spent" => {
+                task.spent = value
+                    .parse()
+                    .map_err(|_| ParseError::new(no, "invalid spent value"))?;
+            }
+            "running" => {
+                task.running = Some(parse_ts(&value, no)?);
             }
             other => {
                 return Err(ParseError::new(
@@ -495,6 +508,9 @@ fn write_goal(out: &mut String, goal: &Goal) {
     if let Some(cursor) = goal.cursor {
         out.push_str(&format!("  current t{cursor}\n"));
     }
+    if let Some(last) = goal.last_added {
+        out.push_str(&format!("  last t{last}\n"));
+    }
     if let GoalStatus::Done(ts) = &goal.status {
         out.push_str(&format!("  @ done={}\n", fmt_ts(ts)));
     }
@@ -535,6 +551,12 @@ fn write_task(out: &mut String, task: &Task, depth: usize) {
             Schedule::DateTime(ts) => fmt_ts(ts),
         };
         out.push_str(&format!("{indent2}@ at={value}\n"));
+    }
+    if task.spent != 0 {
+        out.push_str(&format!("{indent2}@ spent={}\n", task.spent));
+    }
+    if let Some(start) = &task.running {
+        out.push_str(&format!("{indent2}@ running={}\n", fmt_ts(start)));
     }
     for child in &task.children {
         write_task(out, child, depth + 1);

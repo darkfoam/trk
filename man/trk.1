@@ -1,4 +1,4 @@
-.TH TRK 1 "2026-10-08" "trk 0.2.1" "User Commands"
+.TH TRK 1 "2026-10-15" "trk 0.4.1" "User Commands"
 .SH NAME
 trk \- adhd compliant task tracking
 .SH SYNOPSIS
@@ -9,1501 +9,439 @@ trk \- adhd compliant task tracking
 .PP
 With no command,
 .B trk
-prints the status view: what you are doing, and why. With a command it runs that
-command. Every command and its arguments are listed under
-.BR COMMANDS .
+prints the context view: the current task, its siblings, and its parents. With a
+command it runs that command.
 .SH DESCRIPTION
 .B trk
 tracks what you are doing, and why, while your work branches into side quests.
-It targets rabbit holes: you start a task, discover you need another, then
-another, and three hours later you cannot remember why you came here.
-.B trk
-keeps the chain.
+It treats work as a tree of tasks under a goal, keeps a pointer to the one task
+you are actually on, and makes it cheap to record, in the moment, how a new task
+relates to the last one.
 .PP
-Most task trackers assume you know the full list of steps up front. Real work
-does not behave that way: you begin with a goal, take one step, the step
-reveals a dependency, the dependency reveals a question, and the question sends
-you down a hole. By the time you climb out, you have forgotten the shape of the
-thing you were originally doing.
-.B trk
-is built for that moment. It treats work as a tree of tasks under a goal, keeps
-a pointer to the one task you are actually on, and makes it trivial to record,
-in the instant, the reason a new task exists.
-.PP
-The tool is deliberately small in surface area and large in discipline: one
-binary and one plain text file. That file is human readable, hand editable, safe
-to keep in git, and safe to back up with any tool you already trust. There is no
-time tracking, no network access, no accounts, no telemetry, no background
-daemon, no multi\-user support, and no natural\-language date parsing beyond the
-small, documented grammar in
-.BR "trk at" .
-.PP
-The most important command is the one you type most often: bare
-.BR trk .
-It always answers the same question, "what was I doing, and why?", and every
-other command exists to keep that answer accurate.
+It is one binary and one plain text file. The file is human readable, hand
+editable, safe to keep in git, and safe to back up with any tool. There is no
+network access, no accounts, no background daemon, and no scheduling.
 .SH CONCEPTS
-A handful of words mean exactly one thing each throughout this manual.
 .TP
 .B Goal
-A named "big thing" you are working toward. It has a title, a status (open or
-done), and its own tree of tasks. Exactly one goal is active at a time. You do
-not "do" a goal directly; you finish its tasks and then close it.
+A named "big thing" you are working toward, with its own tree of tasks and its
+own cursor. Exactly one goal is active at a time.
 .TP
 .B Task
-A single line of text with a state, a creation time, optional note lines,
-optional stop reason, optional schedule, and an ordered list of child tasks.
-Tasks nest; a child is "something I need in order to finish the parent".
-.TP
-.B Tree
-The tasks of a goal. The roots are the top\-level tasks, in order, and every
-task has an ordered list of children. Because tasks own their children the
-structure is a tree and never a graph: a task has exactly one parent, or is a
-root.
-.TP
-.B Cursor
-The pointer to the current task. Each goal stores its own cursor, which is
-either a task id or empty. A cursor never points at a done or dropped task.
+A single line of text with a state, a creation time, an ordered list of child
+tasks, and a recorded duration. A child is "something I need in order to finish
+the parent".
 .TP
 .B "Current task"
-The task the cursor points at in the active goal, that is, "what I am doing
-right now". Many commands act on it by default.
+The task the active goal's cursor points at: what you are doing right now. It
+receives no special treatment until you act on it with
+.BR done ,
+.BR time ,
+.BR stop ,
+or
+.BR switch .
+.TP
+.B "Most recently added"
+Every goal remembers the last task you added. The
+.B then
+and
+.B and
+commands anchor there, so a tree is built by chaining them.
 .TP
 .B State
-One of open, done, dropped, stopped. Stopped means "left unfinished on purpose,
-with a reason". Open and stopped tasks are both unfinished, which matters for
-blocking and for numbering. Done and dropped tasks are finished.
-.TP
-.B "Open descendant"
-A task below some task that is open or stopped. "Has open children" in this
-manual means "has at least one open descendant", at any depth.
-.TP
-.B Note
-Free text attached to a task, zero or more lines. The "why" captured when a task
-is created is the first note line. It is one field, called
-.B why
-on the command line and shown as
-.B why:
-in views.
-.TP
-.B Inbox
-A goal\-less list of quick captures. Items are not tasks until you take them
-into a goal.
-.TP
-.B Store
-The flat text file holding all goals, tasks, and the inbox. See
-.B FILES
-for its location and
-.B FILE FORMAT
-for its grammar.
-.TP
-.B Config
-The small TOML file that says where the store lives and sets a few display
-options. See
-.BR CONFIGURATION .
-.SH THE MODEL
-A goal is a container and a boundary. Only one goal is active at a time, meaning
-"the goal whose tasks you are looking at". Switching goals is cheap and does not
-disturb the others, because every goal remembers its own cursor; when you come
-back you resume exactly where you left off.
-.PP
-Tasks live inside exactly one goal and never move between goals. If you always
-add a child when you discover a prerequisite, then at any moment the path from
-the goal down to your current task is a literal list of reasons, each one a step
-on the way to the goal. That path is the why chain, and it is the thing
-.B trk
-is really for.
-.PP
-Four moves cover almost everything that happens mid\-work:
-.TP
-.B "trk add X"
-"I need X to finish this." Create a child of the current task and descend into
-it. This is the single most important command for capturing a rabbit hole.
-.TP
-.B "trk by X"
-"Also, X." Create an unrelated top\-level task and stay where you are.
-.TP
-.B "trk and X"
-"And also, X, at this same level." Create a sibling immediately after the
-target and stay.
-.TP
-.B "trk then X"
-"Once this is done, then X." Make X the parent of a task you pick and stay.
-This is how you build a plan forward from the first step; see
-.BR "trk then" .
-.PP
-A fifth move, finishing with
-.BR "trk done" ,
-walks you back up the chain and tells you where you are and why. Because a
-parent cannot be completed while it still has open descendants, the tool
-refuses to let you call something "done" while loose ends remain; it lists the
-outstanding children and exits 3. When you truly mean to finish a parent anyway,
-say so explicitly with
-.BR \-\-force .
-Goals are closed in the same spirit:
-.B "trk goal done"
-refuses while tasks remain open unless forced.
-.PP
-Because the cursor is per goal and never rests on a finished task,
-.B trk
-always has an answer to "where am I?" that is a live, unfinished task, or an
-honest "nowhere, this goal is finished".
-.SH GLOBAL OPTIONS
-.TP
-.B \-\-color auto|always|never
-Force color on or off, overriding the
-.B color
-key in the config file. The default is
-.BR auto ,
-which enables color only when standard output is a terminal,
-.B NO_COLOR
-is unset, and
-.B TERM
-is not
-.BR dumb .
-This option wins over the config file.
-.TP
-.B \-h, \-\-help
-Print help for
-.B trk
-or for the subcommand that precedes it, wrapped at 80 columns.
-.TP
-.B \-V, \-\-version
-Print the version and exit.
-.PP
-Two conventions apply to every command:
-.IP \(bu 2
-Free text is collected from all remaining positional arguments and joined with
-single spaces. Quotes are optional. To pass text that starts with a
-.BR \- ,
-put
-.B \-\-
-before it.
-.IP \(bu 2
-An unknown subcommand is a usage error and exits 2.
-.B trk
-never treats an unknown word as new task text.
-.SH COMMAND ALIASES
-Several commands have a one\-letter alias so common actions cost one keystroke:
-.RS 4
-.nf
-d = done    u = undo    l = list    n = note
-w = why     s = stop    g = goal    i = jot
-.fi
-.RE
-.PP
-So
-.B "trk u"
-is
-.BR "trk undo" ,
+One of open, done, dropped, stopped. Open and stopped tasks are unfinished; done
+and dropped tasks are finished. Only
+.B done
+produces
+.IR done ,
 and
-.B "trk g new X"
-is
-.BR "trk goal new X" .
-.SH COMMANDS
-Each command is described with its behavior, its options, and examples where
-they help. Examples assume the store from
-.BR "A WORKED SESSION" .
-The option
-.B \-s
-(also spelled
-.BR \-p )
-chooses a target task in a picker, and is called out wherever it applies. When
-there is no terminal to draw the picker in, the numbered choices are printed to
-standard error and the number is read from standard input (an empty line accepts
-the highlighted default), so a pipeline can drive it too.
-.SS trk
-With no arguments,
-.B trk
-prints the status view and exits 0, even when there is no goal. This is the
-command you will run more than any other.
-.PP
-The status view shows the goal title, up to four ancestors of the current task
-(outermost first, with a summary line if there are more), the current task
-marked with the cursor symbol, its why lines, a stopped line if it is stopped,
-and up to eight lines of open descendants with a summary if there are more.
-.PP
-.RS 4
-.nf
-Ship login fix
-  Document the process
-    Fix login bug
-      Reproduce on staging
-        > Get staging creds
-          why: can't log in
-.fi
-.RE
-.PP
-If the active goal has no current task, it prints the goal title and
-.BR "no current task" ,
-followed by a suggestion: if open tasks exist,
-.BR "try: trk switch" ;
-otherwise
-.BR "try: trk goal done or trk by <task>" .
-If no goal is active, it prints
-.BR "no goal yet. try: trk goal new <title>" .
-On a brand\-new store it prints a short hint instead.
-.SS trk add
-.nf
-trk add [\-s|--switch] [\-n|--stay] [\-w \fIWHY\fR] [--no\-why] \fITEXT\fR ...
-.fi
-.PP
-"I need this to finish what I am doing." Creates a new open task and appends it
-as the last child of the target. By default the cursor moves onto the new task,
-so you descend into what you just discovered.
-.TP
-.B \-s, \-\-switch
-Choose the parent task in a picker instead of using the current task. With an
-explicit parent chosen this way the cursor does not move.
-.TP
-.B \-n, \-\-stay
-Do not move the cursor onto the new task, even though the current task is the
-parent. Useful when recording a prerequisite you do not intend to start yet.
-.TP
-.B \-w, \-\-why \fIWHY\fP
-Supply the why inline and skip the interactive prompt.
-.TP
-.B \-\-no\-why
-Skip the why prompt and store nothing.
-.PP
-If the active goal has no current task, the new task becomes a root and becomes
-the current task, whatever the other options say.
-.PP
-.RS 4
-.nf
-$ trk add Reproduce on staging \-w "need a failing case"
-Ship login fix
-  Fix login bug
-    > Reproduce on staging
-        why: need a failing case
-.fi
-.RE
-.SS trk by
-.nf
-trk by [\-w \fIWHY\fR] [--no\-why] \fITEXT\fR ...
-.fi
-.PP
-"Also, this other thing." Creates a new open task and appends it as the last
-root of the active goal. The cursor does not move, unless it was empty, in which
-case the new task becomes current. Prints
-.B added: <text>
-followed by the status view. Contrast with
-.BR add ,
-which buries the new task under the current one.
-.TP
-.B \-w, \-\-why \fIWHY\fP
-Supply the why inline.
-.TP
-.B \-\-no\-why
-Skip the why prompt.
-.PP
-.RS 4
-.nf
-$ trk by Call internet company \-w "wifi flaky"
-added: Call internet company
-.fi
-.RE
-.SS trk then
-.nf
-trk then [\-c|\-\-current] [\-w \fIWHY\fR] [--no\-why] \fITEXT\fR ...
-.fi
-.PP
-"Once I am done with this, then that." Creates a new task and makes it the
-direct parent of the target, so the target and everything below it moves
-underneath the new task. The cursor does not move, unless it was empty. Think of
-it as inserting one more step just above the work you picked.
-.PP
-By default you choose the target in a picker (or, without a terminal, by a
-number read from standard input); the picker starts on the most recently created
-task, so repeated
-.B then
-grows the chain: wrap a task with one step, then wrap that step with the next.
-Pass
-.B \-c
-to target the current task instead. This is how you build a plan outward from
-the first step instead of backward from a final goal. Each
-.B then
-adds the next thing to do as a new outer task, and because that task is a
-parent, finishing the step beneath it walks you up the chain in order. Repeated
-.B then
-therefore produces a list that reads top to bottom while your cursor stays on
-the first step.
-.PP
-The difference from
+.B drop
+removes a task outright.
+.SH "THE MODEL"
+Four commands add tasks, each relative to something that already exists.
 .B add
-is direction.
-.B add
-records what you need
-.I before
-the current task (a child);
+adds a top-level task under the goal and moves the cursor onto it.
 .B then
-records what happens
-.I after
-it (a new parent).
+inserts a new task as the direct parent of the most recently added task, so the
+old task (and everything under it) moves beneath the new one.
+.B and
+inserts a new task as a sibling immediately after the most recently added task,
+and
+.B before
+inserts one immediately before it. That last pair is how you slot a step you
+forgot between two tasks you already made.
 .PP
-For example, if you are on "Download the USB image" and run
-.B trk then "Install the USB image to a flash drive"
-and pick "Download the USB image", then the new task becomes its parent. Run
-.B trk then "Install the image onto a system"
-next and accept the default (the task you just added), and it becomes the parent
-of "Install the USB image to a flash drive". You stay on "Download the USB
-image" the whole time; finishing it with
-.B trk done
-moves you to the next step, and so on up the plan.
-.TP
-.B \-c, \-\-current
-Target the current task instead of picking one.
-.TP
-.B \-w, \-\-why \fIWHY\fP
-Supply the why inline.
-.TP
-.B \-\-no\-why
-Skip the why prompt.
+.B then
+and
+.B and
+leave the cursor where it is; only
+.B add
+moves it. That is what makes
+.B "then \-n"
+useful: it wraps the
+.I current
+task instead of the most recently added one.
 .PP
-.RS 4
-.nf
-$ trk then \-c Document the process \-w "after the fix ships"
-Ship login fix
-  Fix login bug
-    Reproduce on staging
-      Document the process
-        > Get staging creds
-.fi
-.RE
-.SS trk and
-.nf
-trk and [\-s|--switch] [\-w \fIWHY\fR] [--no\-why] \fITEXT\fR ...
-.fi
-.PP
-Creates a new task as a sibling of the target, placed immediately after it. The
-cursor does not move. This is the "one more thing at the same level" command:
-rather than start a new top\-level branch with
-.BR by ,
-it keeps related tasks together. Without
-.B \-s
-it acts on the current task, so there must be one.
-.TP
-.B \-s, \-\-switch
-Choose the target in a picker.
-.TP
-.B \-w, \-\-why \fIWHY\fP
-Supply the why inline.
-.TP
-.B \-\-no\-why
-Skip the why prompt.
-.SS trk done
-.nf
-trk done [\-f|--force]
-.fi
-.PP
-Finishes the current task and walks back up the chain. It marks the task done
-with a completion timestamp, clears any stop reason, and moves the cursor to the
-next sensible unfinished task:
-.IP \(bu 2
-Let P be the nearest ancestor that is still unfinished. If P has other open
-descendants, the cursor moves to the first open leaf inside P and prints a
-.B next:
-message naming the leaf and the task it is still needed for.
-.IP \(bu 2
-If P has no other open descendants, the cursor moves to P and prints a
-.B back to:
-message.
-.IP \(bu 2
-If there is no such ancestor, the cursor moves to the next unfinished top\-level
-task (wrapping around) with a
-.B "next top\-level task:"
-message, or becomes empty if none remain.
-.IP \(bu 2
-If the cursor ends empty and the goal has no open tasks,
-.B trk
-prints a hint to close the goal.
-.TP
-.B \-f, \-\-force
-Finish even if the task has open descendants. With
-.BR \-\-force ,
-the cursor jumps to the first open leaf under the finished task.
-.PP
-Without
-.BR \-\-force ,
-a task with open descendants is blocked: nothing changes, an orange warning
-lists the outstanding sub\-tasks, and the exit code is 3.
-.PP
-.RS 4
-.nf
-$ trk done
-back to: Reproduce on staging
-  why: need a failing case
-.fi
-.RE
-.SS trk drop
-.nf
-trk drop [\-f|--force] [\-w \fIWHY\fR]
-.fi
-.PP
-Like
-.BR done ,
-but marks the task dropped rather than done, and follows the same cursor rules.
-Dropping means "I am consciously not doing this" and is reversible with
-.BR "trk undo" .
-.TP
-.B \-f, \-\-force
-Drop even if the task has open descendants. With
-.BR \-\-force ,
-the entire subtree is dropped, and the cursor moves using the ancestor rules
-(there is no "first open leaf under the dropped task" case).
-.TP
-.B \-w, \-\-why \fIWHY\fP
-Append the text to the dropped task's note as
-.BR "dropped: <text>" .
-.SS trk stop
-.nf
-trk stop [\-s|--switch] \fIREASON\fR ...
-.fi
-.PP
-Leaves the target task unfinished, with a reason: the difference between
-"unfinished and forgotten" and "unfinished on purpose". Sets the state to
-stopped and does not move the cursor. If no reason is given and a terminal is
-available,
+.B add
+,
+.B then
+,
+.B and
+, and
+.B before
+each accept an optional
+.IR why :
+.BR \-w / \-\-why
+supplies it inline, otherwise
 .B trk
 asks
-.BR "why stopping? " .
-A stopped task counts as unfinished everywhere; it still blocks its parent and
-still appears in lists and pickers. Its reason shows in the status view as
-.B "⏸ stopped: <reason>"
-until the cursor lands on the task again, or
-.B trk go
-is run, or the task is done or dropped.
-.TP
-.B \-s, \-\-switch
-Choose the task in a picker.
-.SS trk go
-.nf
-trk go
-.fi
-.PP
-"I am back." If the current task is stopped, print
-.BR "stopped earlier: <reason>" ,
-set it open, and clear the reason. Always print the why chain. It is read\-only
-when the task was not stopped, and exits 4 if there is no current task.
-.SS trk why
-.nf
-trk why [\-s|--switch]
-.fi
-.PP
-Print the why chain: the path from the goal root to the target, each node
-followed by its notes. Nodes without a note show
-.B "why: (none)"
-in dim text. The target is marked with the cursor symbol. Read\-only.
-.TP
-.B \-s, \-\-switch
-Show the chain for a chosen task instead of the current task.
-.PP
-.RS 4
-.nf
-$ trk why
-Ship login fix
-  Document the process
-    why: after the fix ships
-    Fix login bug
-      why: customers locked out
-      Reproduce on staging
-        why: need a failing case
-        > Get staging creds
-          why: can't log in
-.fi
-.RE
-.SS trk note
-.nf
-trk note [\-s|--switch] [\-r \fITEXT\fR] [\-c|--clear] \fITEXT\fR ...
-.fi
-.PP
-Read or add note lines on a task. With no text, print the target's note lines.
-With text, append a new note line. Notes are the same field as the why and are
-shown dim in views. After a mutation,
-.B trk
-prints
-.B noted.
-and the status view.
-.TP
-.B \-r, \-\-replace \fITEXT\fP
-Replace all note lines with the given text.
-.TP
-.B \-c, \-\-clear
-Remove all note lines.
-.TP
-.B \-s, \-\-switch
-Act on a chosen task.
-.SS trk rename
-.nf
-trk rename [\-s|--switch] \fITEXT\fR ...
-.fi
-.PP
-Replace the target's text. Output is the status view.
-.TP
-.B \-s, \-\-switch
-Choose the task in a picker.
-.SS trk switch
-.nf
-trk switch [\fIN\fR]
-.fi
-.PP
-Choose the current task. With
-.BR N ,
-select row N of the numbering shown by
-.BR "trk list"
-(open and stopped tasks only, depth first). Without
-.BR N ,
-open the picker on the active goal.
-.PP
-After switching, the landing rule applies: if the chosen task was stopped, it is
-reopened and
-.B trk
-prints
-.BR "stopped earlier: <reason>" .
-If the chosen task has open descendants,
-.B trk
-prints an orange warning that it cannot be completed until they are done, but
-the cursor still moves. Pressing Esc in the picker exits 5 and changes nothing.
-Switching to the current task is a no\-op that still prints status.
-.SS trk list
-.nf
-trk list [\-a|--all] [--all\-goals]
-.fi
-.PP
-Print the whole task tree of the active goal. The first line is the goal title.
-Open and stopped tasks are numbered depth first from 1, and those numbers are
-what
-.B "trk switch N"
-accepts. Indentation is two spaces per level. Read\-only.
-.TP
-.B \-a, \-\-all
-Also show done and dropped tasks. They display
-.B x
-or
-.B \-
-instead of a number, are dim, and never count in the numbering. A done task
-that still has open descendants is always shown, dim, as context, even without
-.BR \-a .
-.TP
-.B \-\-all\-goals
-Print every goal, with its title as a heading and a blank line between goals.
-Numbering restarts per goal. Numbering for
-.B "switch N"
-applies only to the active goal.
-.PP
-.RS 4
-.nf
-$ trk list
-Ship login fix
- 1  Document the process
- 2    Fix login bug
- 3      Reproduce on staging
- 4        > Get staging creds
- 5      Check auth logs
- 6  Call internet company
-.fi
-.RE
-.SS trk undo
-.nf
-trk undo [\fIN\fR]
-.fi
-.PP
-Restore the Nth newest snapshot from the undo ring (default 1), discarding the
-N\-1 newer ones and the current state. Prints
-.B "undid: <label>"
-followed by the status view. If the ring is empty it prints
-.B "nothing to undo"
-and exits 0. If N is larger than the ring, or is 0, it exits 1.
-.PP
-Undo restores a snapshot literally; it does not apply the landing rule. Undo is
-not itself undoable, so there is no redo. Snapshots are whole\-file copies taken
-before every successful mutation and kept up to
-.B undo_depth
-files deep.
-.SS trk goal
-.nf
-trk goal [show|list|new|switch|done|rename|reopen]
-.fi
-.PP
-Manage goals. With no subcommand, behaves like
-.BR "goal show" .
-Every subcommand except
-.B show
-and
+.BR "why? " \-\-
+press Enter to record none, or pass
+.B \-\-no\-why
+to skip the prompt. The why is stored as a note and shown beneath the task by
 .B list
-mutates the store.
-.SS "trk goal show"
-Print the active goal's title, id, state, creation time, and counts of open and
-done tasks. Read\-only.
-.SS "trk goal list"
-Print a numbered list of every goal, the active one marked with the cursor
-symbol, each with its open task count and
-.B (done)
-for completed goals. These numbers are what
-.B "goal switch N"
-accepts. Read\-only.
-.SS "trk goal new"
-.nf
-trk goal new [\-n|--stay] \fITITLE\fR ...
-.fi
-.PP
-Create an open goal with an empty tree and make it active, unless
-.B \-n/\-\-stay
-is given. This is how a session usually begins. Name the outcome, not the first
-step.
-.PP
-.RS 4
-.nf
-$ trk goal new Ship login fix
-goal: Ship login fix
-Ship login fix
-no current task
-try: trk goal done or trk by <task>
-.fi
-.RE
-.SS "trk goal switch"
-.nf
-trk goal switch [\fIN\fR]
-.fi
-.PP
-Make another open goal active. With no argument, open a picker of open goals.
-.B N
-is the number from
-.BR "goal list" .
-Output is the status view for the new active goal. Each goal keeps its own
-cursor.
-.SS "trk goal done"
-.nf
-trk goal done [\-f|--force]
-.fi
-.PP
-Mark the active goal done. If it has open tasks and
-.B \-\-force
-is not given, exit 3 and list up to five of them. With
-.BR \-\-force ,
-the tasks stay as they are. Afterwards the next open goal in file order
-(wrapping) becomes active, or none does. Prints
-.B "goal done: <title>"
-and the new status view.
-.SS "trk goal rename"
-.nf
-trk goal rename \fITITLE\fR ...
-.fi
-.PP
-Rename the active goal.
-.SS "trk goal reopen"
-.nf
-trk goal reopen [\fIN\fR]
-.fi
-.PP
-Reopen a done goal and make it active. With no argument, open a picker.
-.B N
-is the number from
-.BR "goal list" .
-.SS trk jot
-.nf
-trk jot \fITEXT\fR ...
-.fi
-.PP
-Append an item to the inbox. There is no why prompt. It never touches any goal
-or cursor, and it works with no goals at all. Prints
-.BR "jotted: <text>  (inbox: N)" .
-.SS trk inbox
-.nf
-trk inbox
-.fi
-.PP
-List the inbox items, numbered oldest first, with their creation date.
-Read\-only. When empty it prints
-.BR "inbox is empty" .
-.SS "trk inbox take"
-.nf
-trk inbox take [\fIN\fR] [--goal \fINAME\fR | --new\-goal \fITITLE\fR] [\-s|--switch] [\-a|--activate]
-.fi
-.PP
-Take an item out of the inbox and turn it into a task.
-.IP "1." 3
-Choose the item:
-.BR N ,
-or a picker if omitted. If the inbox has exactly one item, it is used
-automatically.
-.IP "2." 3
-Choose the goal:
-.B \-\-goal
-(case\-insensitive substring; exactly one open goal must match),
-.B \-\-new\-goal
-(create it), or interactively a picker of open goals.
-.IP "3." 3
-Create a task from the item text in that goal as a root, appended last.
-.IP "4." 3
-Ask for a why, then remove the item from the inbox.
-.IP "5." 3
-The active goal and cursors are unchanged unless
-.B \-a/\-\-activate
-is given, which makes the goal active. The empty\-cursor rule applies inside
-that goal.
-.TP
-.B \-s, \-\-switch
-After the goal is chosen, pick a parent task instead of making a root.
-.TP
-.B \-a, \-\-activate
-Make the chosen goal active.
-.PP
-Non\-interactive use requires
-.B N
-and one of
-.B \-\-goal
-or
-.BR \-\-new\-goal .
-.SS "trk inbox drop"
-.nf
-trk inbox drop [\fIN\fR]
-.fi
-.PP
-Remove an item from the inbox (picker if no
-.BR N ).
-Prints
-.BR "dropped: <text>" .
-.SS trk log
-.nf
-trk log [\fIWHEN\fR]
-.fi
-.PP
-Print what got finished, by day, newest first. Each day's header shows the
-weekday, date, and counts of tasks done and added. Done tasks are sorted by
-completion time, with the goal name in brackets right\-aligned when it fits and
-on its own indented line when it does not. Notes are shown dim, first line only.
-Days with nothing done print
-.BR "nothing finished" .
-.PP
-.B when
-is
-.B today
-(the default),
-.BR yesterday ,
-an integer
-.B N
-(the last N days including today), or
-.BR YYYY\-MM\-DD .
-Read\-only.
-.PP
-.RS 4
-.nf
-$ trk log
-Wed 2026\-10\-07   4 done, 6 added
-  09:40  Write repro steps                  [Ship login fix]
-         why: need a failing case
-  10:15  Get staging creds                  [Ship login fix]
-.fi
-.RE
-.SS trk at
-.nf
-trk at [\-s|--switch] [--clear] \fIWHEN\fR ...
-.fi
-.PP
-Set the target's schedule. The schedule is stored as an
-.B @ at=
-attribute and surfaces in
-.BR "trk agenda" .
-.TP
-.B \-\-clear
-Remove the schedule.
-.TP
-.B \-s, \-\-switch
-Choose the task in a picker.
-.PP
-With no
-.B when
-and a terminal,
-.B trk
-asks two questions:
-.BR "date (YYYY\-MM\-DD, today, tomorrow, mon..sun, +Nd): "
-then
-.BR "time (HH:MM, Enter for none): " .
-.PP
-The grammar for
-.B when
-is a date token followed by an optional time token:
-.IP \(bu 2
-Date:
-.BR today ,
-.BR tomorrow ,
-.B mon
-through
-.B sun
-(the next such day, not today),
-.BR YYYY\-MM\-DD ,
-or
-.B +Nd
-(N days from now).
-.IP \(bu 2
-Time:
-.B HH:MM
-(24 hour) or
-.B H
-/
-.B HH
-followed by
-.B am
-or
-.BR pm .
-.IP \(bu 2
-A time alone (
-.BR 15:00 ,
-.BR 3pm )
-means today if still in the future, otherwise tomorrow.
-.PP
-Anything else exits 2 with the grammar in the message.
-.PP
-.RS 4
-.nf
-$ trk at tomorrow 3pm
-.fi
-.RE
-.SS trk agenda
-.nf
-trk agenda
-.fi
-.PP
-Print scheduled tasks across all goals. Sections are Overdue, then each
-upcoming date in ascending order; today's still\-upcoming tasks appear under
-Today. Within a date, timed tasks come first by time, then untimed tasks. Only
-open and stopped tasks with an
-.B at
-attribute appear. Read\-only.
-.PP
-.RS 4
-.nf
-Overdue
-  Mon 2026\-10\-05        Renew domain                   [Sticker shop]
-Today  Wed 2026\-10\-07
-  15:00                 Call internet company          [Ship login fix]
-Fri 2026\-10\-09
-  (no time)             Fix dns record                 [Ship login fix]
-.fi
-.RE
-.SS trk start
-.nf
-trk start [--focus]
-.fi
-.PP
-Open the live, full\-screen interface meant to sit in a small tmux or wezterm
-pane beside your work. It works in any terminal that supports ANSI escapes and
-does not depend on a particular shell or OS.
-.TP
-.B \-\-focus
-Start in focus view: the goal, up to four ancestors of the highlighted task,
-the task, and its open descendants.
-.PP
-The layout is a title bar with the active goal and open count, a task pane, a
-why pane for the highlighted task, a transient message line, and a footer of key
-hints. The keys are:
-.IP \(bu 2
-.B j
-/
-.B Down
 and
-.B k
-/
-.B Up
-move the highlight (which does not change the current task).
-.IP \(bu 2
-.B PgUp
-/
-.B PgDn
-page;
-.B c
-jumps the highlight back to the current task.
-.IP \(bu 2
-.B Enter
-picks the highlighted task, exactly as
-.BR "trk switch" .
-.IP \(bu 2
-.B d
-completes it as
-.BR "trk done" ;
-.B s
-stops it and asks for a reason;
-.B g
-runs
-.BR "trk go" ;
-.B n
-adds a note.
-.IP \(bu 2
-.B u
-undoes;
-.B :
-opens a command line that accepts a subset of the CLI commands (the rest
-report "that command is not available in the TUI");
-.B Tab
-toggles full and focus views;
-.B w
-toggles a full\-height why view;
-.B r
-force\-reloads;
-.B ?
-shows help; and
-.B q
-or Ctrl\-C quits.
+.BR "progress goal" .
 .PP
-The view polls the store and reloads automatically when another terminal
-changes it, so running
-.B trk add
-in your main pane is reflected in the pane running
-.B trk start
-within about half a second (the interval is the
-.B poll_ms
-config key). The terminal is restored on every exit path, including after a
-panic.
-.SS trk config
+A typical forward plan starts with the first step and grows backward:
+.PP
 .nf
-trk config [show|path]
-.fi
-.PP
-With no subcommand, run the interactive configuration flow (see
-.BR "FIRST RUN" ).
-.B "config show"
-prints the effective values after environment overrides, the config file path,
-the store path, and the backups folder.
-.B "config path"
-prints only the config file path.
-.PP
-With non\-interactive standard input,
-.B trk config
-exits 1 with a message telling you to create the file by hand or set
-.BR TRK_STORE .
-.SS trk prompt
-.nf
-trk prompt [--max \fIN\fR]
-.fi
-.PP
-For embedding in a shell prompt. Prints the current task text, truncated to
-.B \-\-max
-columns (default 30) with an ellipsis, and no trailing newline. Prints nothing
-if there is no current task.
-.B trk prompt
-never prompts, never takes the lock, never prints errors, and always exits 0,
-even on failure; its target is under ten milliseconds.
-.TP
-.B \-\-max \fIN\fP
-Maximum width in columns before truncation.
-.PP
 .RS 4
-.nf
-# bash
-PS1='$(trk prompt) '"$PS1"
-.fi
+trk add "Get staging creds"
+trk then "Reproduce on staging"     # Reproduce is a parent of Get creds
+trk then "Fix login bug"            # Fix login bug wraps Reproduce
+trk and "Check auth logs"           # a sibling after Fix login bug
+trk before "Ask for access"         # slots in before Check auth logs
 .RE
-.SS trk completions
-.nf
-trk completions \fISHELL\fR
 .fi
+.SH "GLOBAL OPTIONS"
+.TP
+.BR \-\-color " " \fIAUTO|ALWAYS|NEVER\fR
+When to colorize output. Overrides the
+.B color
+config key. Also honoured:
+.B NO_COLOR
+(disable) and
+.B TRK_ASCII=1
+(ASCII symbols).
+.TP
+.BR \-h ", " \-\-help
+Print help.
+.TP
+.BR \-V ", " \-\-version
+Print version.
+.SH "COMMAND ALIASES"
+.B d
+for
+.BR done ,
+.B l
+for
+.BR list ,
+.B u
+for
+.BR undo ,
+and
+.B i
+for
+.BR jot .
+.SH COMMANDS
+.SS "Adding tasks"
+.TP
+.BR "trk add " \fITEXT...\fR
+Add a top-level task to the active goal. The new task becomes both the most
+recently added and the current task.
+.TP
+.BR "trk then " [\-n|\-\-next] " " \fITEXT...\fR
+Add a task as the direct parent of the most recently added task. With
+.BR \-n / \-\-next ,
+wrap the current task instead.
+.TP
+.BR "trk and " \fITEXT...\fR
+Add a task as a sibling immediately after the most recently added task.
+.TP
+.BR "trk before " \fITEXT...\fR
+Add a task as a sibling immediately before the most recently added task.
 .PP
-Print a completion script for
+.B add
+,
+.BR then ,
+.BR and ,
+and
+.B before
+all accept
+.BR \-w " " \fIWHY\fR
+to record why the task exists, and
+.B \-\-no\-why
+to skip the prompt. Without
+.BR \-w ,
+.B trk
+prompts
+.B why?
+when interactive; an empty answer records nothing.
+.SS "Working a task"
+.TP
+.BR "trk list" " (alias " l )
+Print the current task, its siblings, and up to three of its parents, with a
+pointer at the current task. With no current task, the goal's top-level tasks
+are shown.
+.TP
+.BR "trk switch"
+Choose the current task with the picker, over the open tasks of the active goal.
+.TP
+.BR "trk done " [\-f|\-\-force]
+Complete the current task and stop its timer. A task with open sub-tasks cannot
+be completed until they are done; pass
+.B \-\-force
+to override, which exits 3 otherwise.
+.TP
+.BR "trk time"
+Start a timer on the current task. If one is already running, the elapsed time
+is reported instead.
+.TP
+.BR "trk stop"
+Stop the timer on the current task and add the elapsed time to its total.
+.B done
+stops the timer too. With no timer running this exits 4.
+.TP
+.BR "trk drop " [\-y|\-\-yes]
+Delete a task \-\- and its whole subtree \-\- using the picker. When the chosen
+task has sub-tasks, a
+.B y/n
+confirmation is required; pass
+.B \-\-yes
+to skip it, which is required without a terminal. This is permanent; use
+.B undo
+to recover.
+.TP
+.BR "trk undo " [\fIN\fR]
+Restore the store from the \fIN\fRth most recent snapshot (default 1) and print
+the result.
+.SS "Goals"
+.TP
+.BR "trk new goal " [\fITITLE...\fR]
+Create a goal and make it active. The title is prompted for when omitted, which
+requires a terminal.
+.TP
+.BR "trk list goal"
+List every goal, numbered, with its open-task count and the active one marked.
+.TP
+.BR "trk switch goal"
+Choose the active goal with the picker.
+.TP
+.BR "trk progress goal"
+Print every task in the active goal as one tree. Completed tasks are struck
+through, the current task is pointed at, and recorded durations are shown.
+.TP
+.BR "trk delete goal " [\-y|\-\-yes]
+Delete a goal and all of its tasks, using the picker. A
+.B y/n
+confirmation is required unless
+.B \-\-yes
+is given.
+.SS "Inbox"
+.TP
+.BR "trk jot " \fITEXT...\fR
+Capture a task in the inbox without filing it under a goal.
+.TP
+.BR "trk inbox"
+File inbox items with the picker. Choose an item, then a goal (TAB creates a new
+goal), then optionally a task to nest under; the default files the item at the
+top level of the goal.
+.SS "Reporting"
+.TP
+.BR "trk log " [\fIWHEN\fR]
+List what got finished, by day, newest first, with the time spent on each and a
+daily total.
+.I WHEN
+is
+.BR today " (the default), " yesterday ", a count of days back ("
+.BR 7 ),
+or a
+.B YYYY\-MM\-DD
+date.
+.SS "Setup"
+.TP
+.BR "trk completions " [\fISHELL\fR]
+Install shell completions for the detected shell (from
+.BR $SHELL )
+into the user's completion directory, creating it if needed and using
+.B sudo
+only when a system path is required. Pass a shell to override: one of
+.BR sh ,
 .BR bash ,
 .BR zsh ,
 .BR fish ,
-.B powershell ,
+.BR powershell ,
 or
 .BR elvish .
-.PP
-.RS 4
-.nf
-$ trk completions bash  > ~/.local/share/bash\-completion/completions/trk
-$ trk completions zsh   > "${fpath[1]}/_trk"
-$ trk completions fish  > ~/.config/fish/completions/trk.fish
-.fi
-.RE
-.SH FIRST RUN
-The first time you run a command that needs the store,
+.SH "FIRST RUN"
+The first time a command needs the store, and there is no config file,
 .B trk
-checks for a config file. If there is none and
+asks where to keep the task list and its backups, then writes the config. Set
 .B TRK_STORE
-is unset, it runs the configuration flow before continuing. The exceptions are
-.BR help ,
-.BR \-h ,
-.BR \-V ,
-.B completions
-and
-.BR config .
-If there is no terminal, it exits 1 and tells you how to proceed by hand.
-.PP
-The configuration flow asks two questions:
-.RS 4
+to skip the prompts in a script.
+.SH "A WORKED SESSION"
 .nf
-Where should trk keep your task list?
-(a plain text file; you can back it up or put it in git)
-path [~/.local/share/trk/tasks.trk]:
-
-Where should trk keep its backups of the task list?
-(undo snapshots; a folder, ideally somewhere you also back up)
-folder [~/.local/share/trk/backups]:
-.fi
-.RE
-.PP
-Press Enter to accept each default. The store may start with
-.B ~
-or
-.BR $HOME ,
-and is expanded on load. If the store already exists and parses, the flow says
-how many goals it found and uses it. If it does not exist, the parent
-directories are created and an empty, valid store is written. The backups
-folder must be a directory; it is created if missing and may live on another
-disk or inside a synced folder. If a previous config pointed elsewhere and those
-files exist, you are offered the chance to move them.
-.PP
-The very first time you create a task in an empty store, a short walkthrough
-runs: it prints a few lines of introduction, asks
-.BR "What *are* you working on?" ,
-creates a goal from your answer, and then runs the original command against it.
-The walkthrough runs once, ever; it only triggers when there are no goals. A
-bare
-.B trk
-on an empty store does not run it; it prints a hint instead.
-.SH A WORKED SESSION
-This is a complete, realistic session from an empty store to a finished goal,
-narrated at each step. It matches the acceptance scenario used to test the
-program, so you can reproduce it exactly.
-.PP
-.I "Step 0: starting a goal."
-I am about to fix a login problem. Before I touch the code I name the outcome.
 .RS 4
-.nf
-$ trk goal new Ship login fix
-goal: Ship login fix
-Ship login fix
-no current task
-try: trk goal done or trk by <task>
-.fi
+trk new goal "Ship login fix"
+trk add  "Fix login bug"            # cursor moves here
+trk then "Reproduce on staging"     # a parent of Fix login bug
+trk add  "Get staging creds"        # a sibling line of work
+trk list                            # where am I?
+trk switch                          # pick a task to work on
+trk time                            # start the clock
+trk stop                            # pause, bank the time
+trk done                            # finish, and stop the clock
+trk progress goal                   # the whole tree
+trk log 7                           # the last week
 .RE
-I have an empty goal and no current task; the tool is telling me the next move
-is to add a task.
-.PP
-.I "Step 1: the first task."
-The first concrete thing is the bug itself. It is top level, so I use
-.BR by ,
-not
-.BR add .
-.RS 4
-.nf
-$ trk by Fix login bug \-w "customers locked out"
-added: Fix login bug
-Ship login fix
-  > Fix login bug
-      why: customers locked out
 .fi
-.RE
-The empty\-cursor rule made this task current even though
-.B by
-normally stays put.
-.PP
-.I "Step 2: a prerequisite."
-I cannot fix what I cannot see, so I descend.
-.RS 4
-.nf
-$ trk add Reproduce on staging \-w "need a failing case"
-Ship login fix
-  Fix login bug
-    > Reproduce on staging
-        why: need a failing case
-.fi
-.RE
-I am now two levels deep and the chain reads like a sentence: I am reproducing
-on staging because I need a failing case, to fix the login bug, because
-customers are locked out.
-.PP
-.I "Step 3: another prerequisite."
-Reproducing needs access.
-.RS 4
-.nf
-$ trk add Get staging creds \-w "can't log in"
-Ship login fix
-  Fix login bug
-    Reproduce on staging
-      > Get staging creds
-          why: can't log in
-.fi
-.RE
-.PP
-.I "Step 4: an unrelated interruption."
-The wifi drops. This is not part of the login fix; it is a sibling at the top.
-.RS 4
-.nf
-$ trk by Call internet company \-w "wifi flaky"
-added: Call internet company
-.fi
-.RE
-Notice my cursor did not move. The interruption was captured without derailing
-me.
-.PP
-.I "Step 5: a task that belongs to an earlier one."
-I realize I should also check the auth logs, and that belongs to "Fix login
-bug", not to my current task. I switch to the target.
-.RS 4
-.nf
-$ trk switch 1
-Ship login fix
-  > Fix login bug
-      why: customers locked out
-$ trk add \-n Check auth logs \-w "might explain the 401s"
-$ trk switch 3
-.fi
-.RE
-I used
-.B \-n
-so adding the child did not drag me down into it, then moved back to where I
-was.
-.PP
-.I "Step 6: reframing the work."
-I realize the credential step is contained by a documentation step that happens
-after shipping.
-.RS 4
-.nf
-$ trk then \-c Document the process \-w "after the fix ships"
-Ship login fix
-  Fix login bug
-    Reproduce on staging
-      Document the process
-        > Get staging creds
-          why: can't log in
-.fi
-.RE
-.B then
-inserted the new task directly above the credential step. My place is unchanged,
-but the step now sits under a new, correct parent.
-.PP
-.I "Step 7: finishing the leaf."
-I have the credentials.
-.RS 4
-.nf
-$ trk done
-back to: Document the process
-  why: after the fix ships
-.fi
-.RE
-.B trk
-walked me up exactly one level, to the nearest unfinished ancestor, and reminded
-me why it exists. If instead a sibling had still needed me, it would have said
-.B next:
-and named it.
-.PP
-.I "Step 8: climbing the chain."
-I continue finishing, one sensible step at a time:
-.RS 4
-.nf
-$ trk done    # Document the process is done; back to Reproduce on staging
-$ trk done    # Reproduce on staging is done; next: Check auth logs
-$ trk done    # Check auth logs is done; back to Fix login bug
-$ trk done    # Fix login bug is done; next top\-level task: Call internet company
-$ trk done    # Call internet company is done; goal has no open tasks
-.fi
-.RE
-At each step the message told me exactly where I landed and why. When the goal
-ran out of work,
-.B trk
-printed
-.BR "goal has no open tasks. when you are done: trk goal done" .
-.PP
-.I "Step 9: undoing a mistake."
-I finished the last task by accident and want it back.
-.RS 4
-.nf
-$ trk undo
-undid: done
-.fi
-.RE
-The task is open again and current. There is no redo; if I had wanted to step
-back further I would have run
-.BR "trk undo 2" .
-.PP
-.I "Step 10: closing the goal."
-When I mean it, I close the goal.
-.RS 4
-.nf
-$ trk goal done
-goal done: Ship login fix
-.fi
-.RE
-.PP
-.I "Step 11: the stray thought."
-At some point during all this, a thought arrived that did not belong anywhere
-yet.
-.RS 4
-.nf
-$ trk jot look into sqlite wal mode
-jotted: look into sqlite wal mode  (inbox: 1)
-.fi
-.RE
-Later, when I had a spare minute, I filed it into a goal:
-.RS 4
-.nf
-$ trk inbox take 1 \-\-goal "Ship login fix"
-.fi
-.RE
-.SH FILE FORMAT
-The store is one flat UTF\-8 text file, line oriented, written with LF and read
-with CRLF tolerated. It is rewritten whole and atomically on every change; it is
-not append\-only. It is never wrapped; wrapping applies only to terminal output.
-.PP
-A store has a header, an optional inbox, and zero or more goal blocks. Here is a
-complete example:
-.RS 4
-.nf
-trk 1
-next g=2 t=7 i=1
-active g1
-
-inbox
-  i3 2026\-10\-07T09:30:00\-05:00 look into sqlite wal mode
-
-goal g1 open 2026\-10\-07T09:00:00\-05:00 Ship login fix
-  current t3
-  [ ] t6 2026\-10\-07T09:06:00\-05:00 Document the process
-    | after the fix ships
-    [ ] t1 2026\-10\-07T09:01:00\-05:00 Fix login bug
-      | customers locked out
-      [ ] t2 2026\-10\-07T09:02:00\-05:00 Reproduce on staging
-        | need a failing case
-        [ ] t3 2026\-10\-07T09:03:00\-05:00 Get staging creds
-          | can't log in
-      [ ] t5 2026\-10\-07T09:05:00\-05:00 Check auth logs
-        | might explain the 401s
-  [ ] t4 2026\-10\-07T09:04:00\-05:00 Call internet company
-    | wifi flaky
-.fi
-.RE
-.PP
-The header is
-.B trk
-followed by the format version, then a
-.B next
-line with the next unused counter per kind, then an optional
-.B active
-line naming the active goal. Comments begin with
+.SH "FILE FORMAT"
+A store is UTF\-8 text. The first line is
+.BR "trk 1" ,
+the second is the id counters
+.RB ( "next g=.. t=.. i=.." ),
+and an optional third line names the active goal
+.RB ( "active g1" ).
+Blank lines and lines starting with
 .B #
-at column zero and are ignored and dropped on the next write.
+are ignored.
 .PP
-Inside a goal, the
-.B current
-line names the cursor. A task line is indented two spaces per level and begins
-with a bracketed state:
-.B [ ]
-open,
-.B [x]
-done,
-.B [-]
-dropped,
-.B [!]
-stopped. A done or dropped task must carry
-.B @ done=
-or
-.B @ dropped=
-with an RFC 3339 timestamp. A scheduled task carries
-.B @ at=
-with either a timestamp or a date. A stopped task must carry a
+An optional
+.B inbox
+block lists captured items, each indented two spaces as
+.BR "i<id> <timestamp> <text>" .
+.PP
+Each goal is a
+.B goal
+line:
+.PP
+.RS 4
+.B goal g<id> <open|done> <timestamp> <title>
+.RE
+.PP
+followed by indented lines: an optional
+.B "current t<id>"
+cursor and
+.B "last t<id>"
+pointer, and then the task tree. A task is:
+.PP
+.RS 4
+.B "[ ] t<id> <timestamp> <text>"
+.RE
+.PP
+where the state character is a space (open),
+.B x
+(done),
+.B \-
+(dropped), or
 .B !
-reason line. Notes are
-.B |
-lines. A goal is
-.B goal g\fIN\fR open|done \fItimestamp\fR \fItitle\fR
-and a completed goal adds
-.B @ done=
-on the next indented line.
+(stopped). Children are indented by two spaces. Attribute lines are indented two
+spaces further and use
+.B "@ key=value"
+with keys
+.BR done ,
+.BR dropped ,
+.BR at ,
+.BR spent
+(seconds), and
+.BR running
+(a start timestamp). Note lines begin with
+.B "| "
+and a stop reason with
+.BR "! " .
 .PP
-Indentation is exactly two spaces per level; tabs are a parse error. Unknown
-line types or bad structure produce a parse error with a line number;
-.B trk
-never guesses and never partially loads. Parsing then serializing a valid file
-produces canonical text, so hand edits are allowed and normalized on the next
-write.
+Files written by older versions may still contain notes, stop reasons, and
+schedules; they are preserved on read and write.
+.PP
+Writes are atomic: the new text is written to a temporary file, synced, and
+renamed over the store, under an advisory lock.
 .SH CONFIGURATION
-The config file is TOML. Its location, in order, is
+The config file is TOML at
 .BR $TRK_CONFIG ,
-then
+else
 .BR $XDG_CONFIG_HOME/trk/config.toml ,
-then
-.BR $HOME/.config/trk/config.toml .
-On Windows
-.B $HOME
-means the user profile directory; the path is otherwise the same everywhere.
+else
+.BR $HOME/.config/trk/config.toml :
 .PP
-The keys are:
-.TP
-.B store
-Required. Path to the store. May start with
-.B ~
-or
-.BR $HOME .
-.TP
-.B backups
-Directory for undo snapshots. Optional; defaults to a
-.B backups
-directory next to the store.
-.TP
-.B color
-.BR auto | always | never .
-Default
-.BR auto .
-.TP
-.B wrap
-Maximum output width in columns, clamped to the range 40 to 200. Default 80.
-.TP
-.B undo_depth
-Number of undo snapshots kept. Default 50.
-.TP
-.B prompt_why
-Ask
-.B why?
-when creating a task. Default true.
-.TP
-.B ascii
-.BR auto | always | never .
-Default
-.BR auto .
-.TP
-.B current_color
-The color of the current task: one of
-.BR black ,
-.BR red ,
-.BR green ,
-.BR yellow ,
-.BR blue ,
-.BR magenta ,
-.BR cyan ,
-.BR white ,
-or a
-.B bright\-
-prefixed variant. Default
-.BR green .
-.TP
-.B poll_ms
-Change\-detection interval for
-.BR "trk start" ,
-in milliseconds. Default 500.
+.nf
+.RS 4
+store         = "~/.local/share/trk/tasks.trk"
+backups       = "~/.local/share/trk/backups"
+color         = "auto"      # auto | always | never
+wrap          = 80          # maximum output width
+undo_depth    = 50          # undo snapshots kept
+prompt_why    = true        # ask "why?" when adding a task
+ascii         = "auto"      # auto | always | never
+current_color = "green"     # color of the current task
+.RE
+.fi
 .PP
-Unknown keys produce a warning, not an error. Invalid values exit 1 naming the
-key and the file.
+Unknown keys are ignored with a warning.
 .SH ENVIRONMENT
 .TP
 .B TRK_CONFIG
-Path to the config file. Overrides the default location.
+Path to the config file.
 .TP
 .B TRK_STORE
-Path to the store. Overrides the
+Path to the store, overriding
 .B store
-key in the config. If set and no config exists, the first\-run flow is skipped.
+in the config. Setting it with no config skips the first run.
 .TP
 .B NO_COLOR
-Disables color.
+Disable color.
 .TP
 .B TRK_ASCII
-Set to
-.B 1
-to force ASCII symbols.
-.TP
-.B TRK_NOW
-Undocumented; for tests only. An RFC 3339 time used as "now".
-.SH OUTPUT AND SYMBOLS
-Normal output goes to standard output; warnings and errors go to standard
-error. Wrapping width is the smaller of
-.B wrap
-and the terminal width, and wrapping is display\-width aware, preserving hanging
-indents.
+When set to
+.BR 1 ,
+use ASCII symbols instead of Unicode.
+.SH "OUTPUT AND SYMBOLS"
+All output wraps at the configured width (80 by default), never mid-character.
+The current task is marked with
+.B >
+(ASCII) or a small triangle, the goal title is bold, the current task is bold in
+.BR current_color ,
+other tasks are dim green, and completed tasks are dim and struck through.
 .PP
-Errors look like
-.BR "trk: <lowercase message>" .
-Warnings look like
-.B "warning: <message>"
-and are printed in orange. Orange is ANSI 256\-color 208; terminals without 256
-colors get yellow. Color is on only when standard output is a terminal,
-.B NO_COLOR
-is unset, and
-.B TERM
-is not
-.BR dumb ;
-.B \-\-color
+Without a terminal, a picker prints its numbered choices to standard error and
+reads the number from standard input; an empty line accepts the highlighted
+default. This lets
+.BR switch ,
+.BR drop ,
+.BR delete goal ,
 and
-.B config.color
-can force it.
-.PP
-Symbols have an ASCII fallback, used when the locale is not UTF\-8, or when
-.B TRK_ASCII=1
-or
-.B ascii = "always"
-is set:
-.RS 4
-.nf
-Meaning          Unicode   ASCII
-cursor             ►        >
-stopped marker     ⏸        !
-up/back arrow      ↑        ^
-ellipsis           …     ...
-.fi
-.RE
-.PP
-The goal title is bold white. The current task is bold in
-.B current_color
-(default green). Every other task is faded green, so the current task stands
-out; done and dropped rows are dim; notes are dim; warnings are orange; errors
-are red.
-.SH EXIT STATUS
+.B inbox
+be driven from a script or pipeline.
+.SH "EXIT STATUS"
 .TP
 .B 0
 Success.
 .TP
 .B 1
-General error: I/O, parse failure, lock timeout, or an invalid value.
+General error.
 .TP
 .B 2
-Usage error, including unknown subcommands and bad
-.B at
-grammar.
+Usage error.
 .TP
 .B 3
-Blocked: a task has open children and
-.B \-\-force
-was not given, or a goal has open tasks and
-.B \-\-force
-was not given.
+Blocked (for example, \fBdone\fR on a task with open sub-tasks).
 .TP
 .B 4
-Nothing to act on: no active goal, or no current task.
+Nothing to act on (no active goal, no current task, no timer, empty picker).
 .TP
 .B 5
-Cancelled by the user in a picker or prompt.
+Cancelled (a picker or confirmation was dismissed).
 .SH FILES
 .TP
-.I ~/.config/trk/config.toml
-Default config file (or under
-.BR $XDG_CONFIG_HOME ).
+.B ~/.config/trk/config.toml
+Configuration.
 .TP
-.I ~/.local/share/trk/tasks.trk
-Default store (or under
-.BR $XDG_DATA_HOME ).
+.B ~/.local/share/trk/tasks.trk
+Default store.
 .TP
-.I <store>.lock
-Advisory lock held for the duration of a mutation; created on demand.
-.TP
-.I <backups>/NNNNNN.trk
-Undo snapshots, each prefixed with a
-.B "# undo\-label:"
-comment recording the command that caused it.
-.SH NOTES
-.B trk
-has no time tracking, no network access, sync, accounts, or telemetry, no
-background daemon, no multi\-user features, no redo, and no natural\-language
-date parsing beyond the grammar in
-.BR "trk at" .
-Future ideas, deliberately not in this version, include reordering and
-reparenting, search, export, tags, repeating tasks, a calendar picker, theming,
-and an edit command that opens
-.BR $EDITOR .
-.SH SEE ALSO
-.BR tmux (1),
+.B ~/.local/share/trk/backups
+Default undo snapshots.
+.SH "SEE ALSO"
 .BR git (1)
 .PP
-Run
-.B trk \-\-help
-or
-.B trk command \-\-help
-for a quick reminder of any command and its options.
+The project page: https://github.com/darkfoam/trk

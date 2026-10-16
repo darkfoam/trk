@@ -1,8 +1,8 @@
 use std::fs;
-use std::io::{IsTerminal, Write};
-use std::path::PathBuf;
+use std::io::IsTerminal;
+use std::path::{Path, PathBuf};
 
-use chrono::{DateTime, FixedOffset, Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
+use chrono::NaiveDate;
 
 use crate::cli::*;
 use crate::config::{self, Config, Toggle};
@@ -10,7 +10,7 @@ use crate::ctx::Ctx;
 use crate::error::TrkError;
 use crate::interact::{NullUi, PickResult, PickRow, PickSpec, TerminalUi, Ui};
 use crate::model::ops::{self, Message, MsgKind, Outcome, Request, Target, ViewHint};
-use crate::model::{Doc, Goal, Schedule, TaskState};
+use crate::model::{Doc, Goal};
 use crate::store::Store;
 use crate::store::undo::UndoRing;
 use crate::ui::{style, views};
@@ -19,14 +19,9 @@ pub fn dispatch(cli: Cli) -> Result<i32, TrkError> {
     let color_flag = cli.color.map(ColorArg::to_toggle);
 
     match cli.command {
-        Some(Command::Completions(args)) => {
-            print_completions(args);
-            Ok(0)
-        }
-        Some(Command::Config(args)) => config_command(color_flag, args),
-        Some(Command::Prompt(args)) => Ok(prompt_command(color_flag, args)),
+        Some(Command::Completions(args)) => completions_command(args),
         other => {
-            let (config, path) = ensure_config(&other)?;
+            let (config, path) = ensure_config()?;
             let ctx = Ctx::new(config, path, color_flag);
             let mut ui: Box<dyn Ui> = if ctx.interactive() {
                 Box::new(TerminalUi::new(ctx.style()))
@@ -37,7 +32,7 @@ pub fn dispatch(cli: Cli) -> Result<i32, TrkError> {
                 None => {
                     let store = active_store(&ctx);
                     let doc = store.read()?;
-                    print_lines(&ctx, &views::status_view(&doc, ctx.wrap, ctx.style()));
+                    print_lines(&ctx, &views::context_view(&doc, ctx.wrap, ctx.style()));
                     Ok(0)
                 }
                 Some(command) => run(&ctx, ui.as_mut(), command),
@@ -56,17 +51,13 @@ fn env_store() -> Option<String> {
         .filter(|s| !s.trim().is_empty())
 }
 
-fn ensure_config(command: &Option<Command>) -> Result<(Config, Option<PathBuf>), TrkError> {
-    let _ = command;
+fn ensure_config() -> Result<(Config, Option<PathBuf>), TrkError> {
     let path = config::config_path();
     if let Some(p) = &path
         && p.exists()
     {
         let (mut cfg, warnings) = Config::from_path(p)?;
         for warning in warnings {
-            if let Some(store) = env_store() {
-                let _ = store;
-            }
             eprintln!("warning: {warning}");
         }
         apply_store_override(&mut cfg)?;
@@ -175,7 +166,6 @@ fn run_config_flow() -> Result<Config, TrkError> {
         prompt_why: true,
         ascii: Toggle::Auto,
         current_color: crate::ui::style::ColorName::default(),
-        poll_ms: 500,
     };
 
     if !config.store.exists() {
@@ -201,51 +191,8 @@ fn run_config_flow() -> Result<Config, TrkError> {
     Ok(config)
 }
 
-fn config_command(color_flag: Option<Toggle>, args: ConfigArgs) -> Result<i32, TrkError> {
-    match args.command {
-        Some(ConfigCommand::Path) => {
-            let path = config::config_path().ok_or(config::ConfigError::NoHome)?;
-            println!("{}", path.display());
-            Ok(0)
-        }
-        Some(ConfigCommand::Show) | None => {
-            if args.command.is_none() {
-                // bare `trk config` runs the interactive flow
-                if !std::io::stdin().is_terminal() {
-                    let path = config::config_path()
-                        .map(|p| p.display().to_string())
-                        .unwrap_or_else(|| "~/.config/trk/config.toml".into());
-                    return Err(TrkError::Message(format!(
-                        "config needs a terminal; create {path} by hand or set TRK_STORE"
-                    )));
-                }
-                run_config_flow()?;
-            }
-            let (mut cfg, _) = match config::config_path() {
-                Some(p) if p.exists() => Config::from_path(&p)?,
-                _ => return Err(TrkError::Message("no config file yet".into())),
-            };
-            apply_store_override(&mut cfg)?;
-            let path = config::config_path()
-                .map(|p| p.display().to_string())
-                .unwrap_or_default();
-            println!("config:  {path}");
-            println!("store:   {}", cfg.store.display());
-            println!("backups: {}", cfg.backups.display());
-            println!("color:   {}", cfg.color.as_str());
-            println!("ascii:   {}", cfg.ascii.as_str());
-            println!("current_color: {}", cfg.current_color.as_str());
-            println!("wrap:    {}", cfg.wrap);
-            println!("undo_depth: {}", cfg.undo_depth);
-            println!("prompt_why: {}", cfg.prompt_why);
-            println!("poll_ms: {}", cfg.poll_ms);
-            let _ = color_flag;
-            Ok(0)
-        }
-    }
-}
-
 fn ask_line(prompt: &str) -> Result<Option<String>, TrkError> {
+    use std::io::Write;
     let mut stdout = std::io::stdout();
     write!(stdout, "{prompt}")?;
     stdout.flush()?;
@@ -297,8 +244,9 @@ fn emit_messages(ctx: &Ctx, messages: &[Message]) {
 fn emit_outcome(ctx: &Ctx, doc: &Doc, outcome: &Outcome) {
     emit_messages(ctx, &outcome.messages);
     match outcome.hint {
-        Some(ViewHint::Status) => print_lines(ctx, &views::status_view(doc, ctx.wrap, ctx.style())),
-        Some(ViewHint::Why) => print_lines(ctx, &views::why_view(doc, ctx.wrap, ctx.style())),
+        Some(ViewHint::Status) => {
+            print_lines(ctx, &views::context_view(doc, ctx.wrap, ctx.style()));
+        }
         Some(ViewHint::None) | None => {}
     }
 }
@@ -326,104 +274,29 @@ fn mutate(ctx: &Ctx, label: &str, request: &Request) -> Result<i32, TrkError> {
     Ok(0)
 }
 
-fn now(ctx: &Ctx) -> DateTime<FixedOffset> {
-    ctx.clock.now()
+fn join_text(words: &[String]) -> String {
+    words.join(" ")
 }
 
-fn unfinished_rows(goal: &Goal, style: &style::Style) -> Vec<PickRow> {
-    let mut rows = Vec::new();
-    let mut n = 0;
-    for (task, depth) in goal.walk() {
-        if !task.state.is_unfinished() {
-            continue;
-        }
-        n += 1;
-        let mut label = format!("{:>2}  {}{}", n, "  ".repeat(depth), task.text);
-        if matches!(task.state, TaskState::Stopped) {
-            label.push(' ');
-            label.push_str(style.stopped());
-        }
-        rows.push(PickRow {
-            id: task.id,
-            label,
-            number: Some(n),
-            current: goal.cursor == Some(task.id),
-        });
+fn require_text(kind: &str, words: &[String]) -> Result<String, TrkError> {
+    let text = join_text(words);
+    if text.trim().is_empty() {
+        return Err(TrkError::Usage(format!("{kind}: give the task text")));
     }
-    rows
+    Ok(text)
 }
 
-/// Which row a picker starts on: the current task normally, or the most
-/// recently created task when `prefer_newest` is set.
-fn picker_initial(rows: &[PickRow], prefer_newest: bool) -> usize {
-    let found = if prefer_newest {
-        rows.iter()
-            .enumerate()
-            .max_by_key(|(_, r)| r.id)
-            .map(|(i, _)| i)
-    } else {
-        rows.iter().position(|r| r.current)
-    };
-    found.unwrap_or(0)
-}
-
-fn switch_target(
-    ctx: &Ctx,
-    ui: &mut dyn Ui,
-    goal: &Goal,
-    header: &str,
-    prefer_newest: bool,
-) -> Result<Target, TrkError> {
-    let rows = unfinished_rows(goal, &ctx.style());
-    let initial = picker_initial(&rows, prefer_newest);
-    let spec = PickSpec {
-        header: header.to_string(),
-        rows,
-        initial,
-    };
-    match ui.pick(&spec)? {
-        PickResult::Chosen(id) => Ok(Target::Task(id)),
-        PickResult::Cancel => Err(TrkError::Cancelled),
-    }
-}
-
-fn resolved_target(
-    ctx: &Ctx,
-    ui: &mut dyn Ui,
-    switch: bool,
-    header: &str,
-) -> Result<Target, TrkError> {
-    resolved_target_prefer(ctx, ui, switch, header, false)
-}
-
-/// Like `resolved_target`, but the picker highlights the most recently created
-/// task when `prefer_newest` is set (used by `then` so repeated calls chain).
-fn resolved_target_prefer(
-    ctx: &Ctx,
-    ui: &mut dyn Ui,
-    switch: bool,
-    header: &str,
-    prefer_newest: bool,
-) -> Result<Target, TrkError> {
-    if !switch {
-        return Ok(Target::Current);
-    }
-    let store = active_store(ctx);
-    let doc = store.read()?;
-    let goal = doc
-        .active_goal()
-        .ok_or(TrkError::Op(ops::OpError::NoActiveGoal))?;
-    switch_target(ctx, ui, goal, header, prefer_newest)
-}
-
+/// The optional "why" for a new task: taken from `--why`, else prompted for
+/// when interactive (an empty line means none).
 fn resolve_why(
     ctx: &Ctx,
     ui: &mut dyn Ui,
     why: Option<String>,
     no_why: bool,
 ) -> Result<Option<String>, TrkError> {
-    if let Some(w) = why {
-        return Ok(Some(w));
+    if let Some(why) = why {
+        let why = why.trim().to_string();
+        return Ok(if why.is_empty() { None } else { Some(why) });
     }
     if no_why || !ctx.config.prompt_why || !ctx.interactive() {
         return Ok(None);
@@ -434,206 +307,336 @@ fn resolve_why(
     }
 }
 
-fn join_text(words: &[String]) -> String {
-    words.join(" ")
+/// Rows for a picker: every task, or only the unfinished ones.
+fn task_rows(goal: &Goal, unfinished_only: bool) -> Vec<PickRow> {
+    let mut rows = Vec::new();
+    let mut n = 0;
+    for (task, depth) in goal.walk() {
+        if unfinished_only && !task.state.is_unfinished() {
+            continue;
+        }
+        n += 1;
+        rows.push(PickRow {
+            id: task.id,
+            label: format!("{:>2}  {}{}", n, "  ".repeat(depth), task.text),
+            number: Some(n),
+            current: goal.cursor == Some(task.id),
+        });
+    }
+    rows
+}
+
+fn goal_rows(doc: &Doc) -> Vec<PickRow> {
+    doc.goals
+        .iter()
+        .enumerate()
+        .map(|(i, g)| PickRow {
+            id: g.id,
+            label: format!("{:>2}  {}", i + 1, g.title),
+            number: Some(i + 1),
+            current: doc.active == Some(g.id),
+        })
+        .collect()
+}
+
+fn interactive_initial(rows: &[PickRow]) -> usize {
+    rows.iter().position(|r| r.current).unwrap_or(0)
 }
 
 fn run(ctx: &Ctx, ui: &mut dyn Ui, command: Command) -> Result<i32, TrkError> {
     match command {
         Command::Add(args) => {
-            let text = join_text(&args.text);
-            if text.trim().is_empty() {
-                return Err(TrkError::Usage("add: give the task text".into()));
-            }
-            let target = resolved_target(ctx, ui, args.switch, "add under which task?")?;
+            let text = require_text("add", &args.text)?;
             let why = resolve_why(ctx, ui, args.why, args.no_why)?;
-            mutate(
-                ctx,
-                "add",
-                &Request::Add {
-                    text,
-                    why,
-                    target,
-                    stay: args.stay,
-                },
-            )
-        }
-        Command::By(args) => {
-            let text = join_text(&args.text);
-            if text.trim().is_empty() {
-                return Err(TrkError::Usage("by: give the task text".into()));
-            }
-            let why = resolve_why(ctx, ui, args.why, args.no_why)?;
-            mutate(ctx, "by", &Request::By { text, why })
+            mutate(ctx, "add", &Request::Add { text, why })
         }
         Command::Then(args) => {
-            let text = join_text(&args.text);
-            if text.trim().is_empty() {
-                return Err(TrkError::Usage("then: give the task text".into()));
-            }
-            let target = resolved_target_prefer(
-                ctx,
-                ui,
-                !args.current,
-                "make it the parent of which task?",
-                true,
-            )?;
+            let text = require_text("then", &args.text)?;
             let why = resolve_why(ctx, ui, args.why, args.no_why)?;
-            mutate(ctx, "then", &Request::Then { text, why, target })
-        }
-        Command::And(args) => {
-            let text = join_text(&args.text);
-            if text.trim().is_empty() {
-                return Err(TrkError::Usage("and: give the task text".into()));
-            }
-            let target = resolved_target(ctx, ui, args.switch, "next to which task?")?;
-            let why = resolve_why(ctx, ui, args.why, args.no_why)?;
-            mutate(ctx, "and", &Request::And { text, why, target })
-        }
-        Command::Done(args) => mutate(ctx, "done", &Request::Done { force: args.force }),
-        Command::Drop(args) => {
-            let why = resolve_why(ctx, ui, args.why, false)?;
             mutate(
                 ctx,
-                "drop",
-                &Request::Drop {
-                    force: args.force,
+                "then",
+                &Request::Then {
+                    text,
+                    next: args.next,
                     why,
                 },
             )
         }
-        Command::Stop(args) => {
-            let target = resolved_target(ctx, ui, args.switch, "which task?")?;
-            let mut reason = join_text(&args.reason);
-            if reason.trim().is_empty()
-                && ctx.interactive()
-                && let Some(text) = ui.ask("why stopping? ")?
-            {
-                reason = text;
-            }
-            mutate(ctx, "stop", &Request::Stop { target, reason })
+        Command::And(args) => {
+            let text = require_text("and", &args.text)?;
+            let why = resolve_why(ctx, ui, args.why, args.no_why)?;
+            mutate(ctx, "and", &Request::And { text, why })
         }
-        Command::Go => mutate(ctx, "go", &Request::Go),
-        Command::Why(args) => {
-            let target = resolved_target(ctx, ui, args.switch, "which task?")?;
-            let store = active_store(ctx);
-            let doc = store.read()?;
-            let goal = doc
-                .active_goal()
-                .ok_or(TrkError::Op(ops::OpError::NoActiveGoal))?;
-            let id = match target {
-                Target::Current => goal
-                    .cursor
-                    .ok_or(TrkError::Op(ops::OpError::NoCurrentTask))?,
-                Target::Task(id) => id,
-            };
-            print_lines(ctx, &views::why_for(goal, id, ctx.wrap, ctx.style()));
-            Ok(0)
+        Command::Before(args) => {
+            let text = require_text("before", &args.text)?;
+            let why = resolve_why(ctx, ui, args.why, args.no_why)?;
+            mutate(ctx, "before", &Request::Before { text, why })
         }
-        Command::Note(args) => {
-            let target = resolved_target(ctx, ui, args.switch, "which task?")?;
-            if let Some(replace) = args.replace {
-                return mutate(
-                    ctx,
-                    "note",
-                    &Request::NoteReplace {
-                        target,
-                        text: replace,
-                    },
-                );
-            }
-            if args.clear {
-                return mutate(ctx, "note", &Request::NoteClear { target });
-            }
-            let text = join_text(&args.text);
-            if text.trim().is_empty() {
+        Command::Done(args) => mutate(ctx, "done", &Request::Done { force: args.force }),
+        Command::Time => mutate(ctx, "time", &Request::Time),
+        Command::Stop => mutate(ctx, "stop", &Request::Stop),
+        Command::Switch(args) => match args.what {
+            Some(SwitchWhat::Goal) => switch_goal(ctx, ui),
+            None => switch_task(ctx, ui),
+        },
+        Command::Drop(args) => drop_command(ctx, ui, args),
+        Command::List(args) => match args.what {
+            Some(ListWhat::Goal) => {
                 let store = active_store(ctx);
                 let doc = store.read()?;
-                let goal = doc
-                    .active_goal()
-                    .ok_or(TrkError::Op(ops::OpError::NoActiveGoal))?;
-                let id = match target {
-                    Target::Current => goal
-                        .cursor
-                        .ok_or(TrkError::Op(ops::OpError::NoCurrentTask))?,
-                    Target::Task(id) => id,
-                };
-                if let Some(task) = goal.find(id) {
-                    for note in &task.note {
-                        println!("{note}");
-                    }
-                }
-                return Ok(0);
+                print_lines(ctx, &views::goal_list_view(&doc, ctx.style()));
+                Ok(0)
             }
-            mutate(ctx, "note", &Request::NoteAdd { target, text })
-        }
-        Command::Rename(args) => {
-            let text = join_text(&args.text);
-            if text.trim().is_empty() {
-                return Err(TrkError::Usage("rename: give the new text".into()));
+            None => {
+                let store = active_store(ctx);
+                let doc = store.read()?;
+                print_lines(ctx, &views::context_view(&doc, ctx.wrap, ctx.style()));
+                Ok(0)
             }
-            let target = resolved_target(ctx, ui, args.switch, "which task?")?;
-            mutate(ctx, "rename", &Request::Rename { target, text })
-        }
-        Command::Switch(args) => switch_command(ctx, ui, args),
-        Command::List(args) => {
+        },
+        Command::Undo(args) => undo_command(ctx, args),
+        Command::New(args) => match args.what {
+            NewWhat::Goal(a) => new_goal(ctx, ui, a),
+        },
+        Command::Progress(_) => {
             let store = active_store(ctx);
             let doc = store.read()?;
             print_lines(
                 ctx,
-                &views::list_view(&doc, ctx.wrap, ctx.style(), args.all, args.all_goals),
+                &views::progress_view(&doc, ctx.clock.now(), ctx.wrap, ctx.style()),
             );
             Ok(0)
         }
-        Command::Undo(args) => undo_command(ctx, args),
-        Command::Goal(args) => goal_command(ctx, ui, args),
+        Command::Delete(args) => match args.what {
+            DeleteWhat::Goal(a) => delete_goal(ctx, ui, a),
+        },
         Command::Jot(args) => {
-            let text = join_text(&args.text);
-            if text.trim().is_empty() {
-                return Err(TrkError::Usage("jot: give the text".into()));
-            }
+            let text = require_text("jot", &args.text)?;
             mutate(ctx, "jot", &Request::Jot { text })
         }
-        Command::Inbox(args) => inbox_command(ctx, ui, args),
+        Command::Inbox => inbox_command(ctx, ui),
         Command::Log(args) => log_command(ctx, args),
-        Command::At(args) => at_command(ctx, ui, args),
-        Command::Agenda => {
-            let store = active_store(ctx);
-            let doc = store.read()?;
-            print_lines(
-                ctx,
-                &views::agenda_view(&doc, now(ctx), ctx.wrap, ctx.style()),
-            );
-            Ok(0)
-        }
-        Command::Start(args) => {
-            crate::tui::run(ctx, args.focus)?;
-            Ok(0)
-        }
-        Command::Prompt(_) => unreachable!("prompt handled in dispatch"),
-        Command::Config(_) => unreachable!("config handled in dispatch"),
         Command::Completions(_) => unreachable!("completions handled in dispatch"),
     }
 }
 
-fn switch_command(ctx: &Ctx, ui: &mut dyn Ui, args: SwitchArgs) -> Result<i32, TrkError> {
+fn switch_task(ctx: &Ctx, ui: &mut dyn Ui) -> Result<i32, TrkError> {
     let store = active_store(ctx);
     let doc = store.read()?;
     let goal = doc
         .active_goal()
         .ok_or(TrkError::Op(ops::OpError::NoActiveGoal))?;
-    let target = match args.index {
-        Some(index) => {
-            let rows = unfinished_rows(goal, &ctx.style());
-            let row = rows
-                .iter()
-                .find(|r| r.number == Some(index))
-                .ok_or_else(|| TrkError::Usage(format!("switch: no task number {index}")))?;
-            Target::Task(row.id)
-        }
-        None => switch_target(ctx, ui, goal, "work on which task?", false)?,
+    let rows = task_rows(goal, true);
+    if rows.is_empty() {
+        return Err(TrkError::Nothing("no open tasks to switch to".into()));
+    }
+    let initial = interactive_initial(&rows);
+    let spec = PickSpec::new("work on which task?", rows, initial);
+    match ui.pick(&spec)? {
+        PickResult::Chosen(id) => mutate(
+            ctx,
+            "switch",
+            &Request::Switch {
+                target: Target::Task(id),
+            },
+        ),
+        PickResult::Cancel => Err(TrkError::Cancelled),
+        PickResult::Create => unreachable!("switch does not allow new items"),
+    }
+}
+
+fn switch_goal(ctx: &Ctx, ui: &mut dyn Ui) -> Result<i32, TrkError> {
+    let store = active_store(ctx);
+    let doc = store.read()?;
+    if doc.goals.is_empty() {
+        return Err(TrkError::Nothing("no goals to switch to".into()));
+    }
+    let rows = goal_rows(&doc);
+    let initial = interactive_initial(&rows);
+    let spec = PickSpec::new("switch to which goal?", rows, initial);
+    match ui.pick(&spec)? {
+        PickResult::Chosen(id) => mutate(ctx, "switch goal", &Request::GoalSwitch { id }),
+        PickResult::Cancel => Err(TrkError::Cancelled),
+        PickResult::Create => unreachable!("switch does not allow new items"),
+    }
+}
+
+fn drop_command(ctx: &Ctx, ui: &mut dyn Ui, args: DropArgs) -> Result<i32, TrkError> {
+    let store = active_store(ctx);
+    let doc = store.read()?;
+    let goal = doc
+        .active_goal()
+        .ok_or(TrkError::Op(ops::OpError::NoActiveGoal))?;
+    let rows = task_rows(goal, false);
+    if rows.is_empty() {
+        return Err(TrkError::Nothing("no tasks to delete".into()));
+    }
+    let initial = interactive_initial(&rows);
+    let spec = PickSpec::new("delete which task?", rows, initial);
+    let id = match ui.pick(&spec)? {
+        PickResult::Chosen(id) => id,
+        PickResult::Cancel => return Err(TrkError::Cancelled),
+        PickResult::Create => unreachable!("drop does not allow new items"),
     };
-    mutate(ctx, "switch", &Request::Switch { target })
+
+    let children = goal.find(id).map(|t| t.children.len()).unwrap_or(0);
+    if children > 0 && !args.yes {
+        if !ctx.interactive() {
+            return Err(TrkError::Usage(
+                "drop: pass --yes to delete a task with sub-tasks without a terminal".into(),
+            ));
+        }
+        let prompt = format!("delete this task and its {children} sub-task(s)? (y/n) ");
+        if !confirm(ui, &prompt)? {
+            return Err(TrkError::Cancelled);
+        }
+    }
+
+    mutate(
+        ctx,
+        "drop",
+        &Request::Drop {
+            target: Target::Task(id),
+        },
+    )
+}
+
+/// Ask a yes/no question. Anything but y/yes (including a dismissed prompt) is
+/// a no.
+fn confirm(ui: &mut dyn Ui, prompt: &str) -> Result<bool, TrkError> {
+    Ok(match ui.ask(prompt)? {
+        Some(answer) => matches!(answer.trim().to_ascii_lowercase().as_str(), "y" | "yes"),
+        None => false,
+    })
+}
+
+fn new_goal(ctx: &Ctx, ui: &mut dyn Ui, args: NewGoalArgs) -> Result<i32, TrkError> {
+    let mut title = join_text(&args.title);
+    if title.trim().is_empty() {
+        if !ctx.interactive() {
+            return Err(TrkError::Usage("new goal: give a title".into()));
+        }
+        title = ui.ask("goal title: ")?.unwrap_or_default();
+    }
+    if title.trim().is_empty() {
+        return Err(TrkError::Usage("new goal: give a title".into()));
+    }
+    mutate(ctx, "new goal", &Request::GoalNew { title })
+}
+
+fn delete_goal(ctx: &Ctx, ui: &mut dyn Ui, args: DeleteGoalArgs) -> Result<i32, TrkError> {
+    let store = active_store(ctx);
+    let doc = store.read()?;
+    if doc.goals.is_empty() {
+        return Err(TrkError::Nothing("no goals to delete".into()));
+    }
+    let rows = goal_rows(&doc);
+    let initial = interactive_initial(&rows);
+    let spec = PickSpec::new("delete which goal?", rows, initial);
+    let id = match ui.pick(&spec)? {
+        PickResult::Chosen(id) => id,
+        PickResult::Cancel => return Err(TrkError::Cancelled),
+        PickResult::Create => unreachable!("delete does not allow new items"),
+    };
+    if !args.yes {
+        if !ctx.interactive() {
+            return Err(TrkError::Usage(
+                "delete goal: pass --yes to confirm without a terminal".into(),
+            ));
+        }
+        if !confirm(ui, "delete this goal and all its tasks? (y/n) ")? {
+            return Err(TrkError::Cancelled);
+        }
+    }
+    mutate(ctx, "delete goal", &Request::GoalDelete { id })
+}
+
+fn inbox_command(ctx: &Ctx, ui: &mut dyn Ui) -> Result<i32, TrkError> {
+    let store = active_store(ctx);
+    let doc = store.read()?;
+    if doc.inbox.is_empty() {
+        return Err(TrkError::Nothing("inbox is empty".into()));
+    }
+
+    // 1. Which item?
+    let rows: Vec<PickRow> = doc
+        .inbox
+        .iter()
+        .enumerate()
+        .map(|(i, item)| PickRow {
+            id: item.id,
+            label: format!("{:>2}  {}", i + 1, item.text),
+            number: Some(i + 1),
+            current: false,
+        })
+        .collect();
+    let spec = PickSpec::new("take which item?", rows, 0);
+    let item_id = match ui.pick(&spec)? {
+        PickResult::Chosen(id) => id,
+        PickResult::Cancel => return Err(TrkError::Cancelled),
+        PickResult::Create => unreachable!("inbox items do not allow new items"),
+    };
+
+    // 2. Which goal? (TAB creates a new one.)
+    let rows = goal_rows(&doc);
+    let initial = interactive_initial(&rows);
+    let mut goal_spec = PickSpec::new("add it to which goal?", rows, initial);
+    goal_spec.allow_new = true;
+    let mut goal = None;
+    let mut new_goal = None;
+    match ui.pick(&goal_spec)? {
+        PickResult::Chosen(id) => goal = Some(id),
+        PickResult::Create => {
+            let title = ui.ask("new goal title: ")?.unwrap_or_default();
+            if title.trim().is_empty() {
+                return Err(TrkError::Cancelled);
+            }
+            new_goal = Some(title);
+        }
+        PickResult::Cancel => return Err(TrkError::Cancelled),
+    }
+
+    // 3. Drill down: insert as a child of a task, or at the top level.
+    let mut parent = None;
+    if let Some(gid) = goal
+        && let Some(g) = doc.goal(gid)
+        && !g.roots.is_empty()
+    {
+        let mut rows = vec![PickRow {
+            id: 0,
+            label: format!("{:>2}  (top level)", 1),
+            number: Some(1),
+            current: false,
+        }];
+        for (i, (task, depth)) in g.walk().iter().enumerate() {
+            rows.push(PickRow {
+                id: task.id,
+                label: format!("{:>2}  {}{}", i + 2, "  ".repeat(*depth), task.text),
+                number: Some(i + 2),
+                current: g.cursor == Some(task.id),
+            });
+        }
+        let spec = PickSpec::new("add it under which task?", rows, 0);
+        match ui.pick(&spec)? {
+            PickResult::Chosen(0) => parent = None,
+            PickResult::Chosen(id) => parent = Some(id),
+            PickResult::Cancel => return Err(TrkError::Cancelled),
+            PickResult::Create => {}
+        }
+    }
+
+    mutate(
+        ctx,
+        "inbox",
+        &Request::InboxTake {
+            id: item_id,
+            goal,
+            new_goal,
+            parent,
+            switch: true,
+        },
+    )
 }
 
 fn undo_command(ctx: &Ctx, args: UndoArgs) -> Result<i32, TrkError> {
@@ -651,302 +654,8 @@ fn undo_command(ctx: &Ctx, args: UndoArgs) -> Result<i32, TrkError> {
             store.save(&doc)?;
             drop(lock);
             println!("undid: {label}");
-            print_lines(ctx, &views::status_view(&doc, ctx.wrap, ctx.style()));
+            print_lines(ctx, &views::context_view(&doc, ctx.wrap, ctx.style()));
             Ok(0)
-        }
-    }
-}
-
-fn goal_command(ctx: &Ctx, ui: &mut dyn Ui, args: GoalArgs) -> Result<i32, TrkError> {
-    let store = active_store(ctx);
-    let doc = store.read()?;
-    match args.command {
-        Some(GoalCommand::Show) | None => {
-            let goal = doc
-                .active_goal()
-                .ok_or(TrkError::Op(ops::OpError::NoActiveGoal))?;
-            println!("{}", goal.title);
-            println!("id: g{}", goal.id);
-            println!("state: {}", if goal.is_open() { "open" } else { "done" });
-            println!("created: {}", goal.created.to_rfc3339());
-            println!("open: {}  done: {}", goal.count_open(), goal.count_done());
-            Ok(0)
-        }
-        Some(GoalCommand::List) => {
-            print_lines(ctx, &views::goal_list_view(&doc, ctx.style()));
-            Ok(0)
-        }
-        Some(GoalCommand::New(a)) => {
-            let title = join_text(&a.title);
-            if title.trim().is_empty() {
-                return Err(TrkError::Usage("goal new: give a title".into()));
-            }
-            mutate(
-                ctx,
-                "goal new",
-                &Request::GoalNew {
-                    title,
-                    stay: a.stay,
-                },
-            )
-        }
-        Some(GoalCommand::Switch(a)) => {
-            let id = resolve_goal_index(&doc, a.index, ui, GoalFilter::Open)?;
-            mutate(ctx, "goal switch", &Request::GoalSwitch { id })
-        }
-        Some(GoalCommand::Done(a)) => {
-            mutate(ctx, "goal done", &Request::GoalDone { force: a.force })
-        }
-        Some(GoalCommand::Rename(a)) => {
-            let title = join_text(&a.title);
-            if title.trim().is_empty() {
-                return Err(TrkError::Usage("goal rename: give a title".into()));
-            }
-            mutate(ctx, "goal rename", &Request::GoalRename { title })
-        }
-        Some(GoalCommand::Reopen(a)) => {
-            let id = resolve_goal_index(&doc, a.index, ui, GoalFilter::Done)?;
-            mutate(ctx, "goal reopen", &Request::GoalReopen { id })
-        }
-    }
-}
-
-/// Which goals a `goal switch`/`goal reopen` selection may target.
-#[derive(Clone, Copy)]
-enum GoalFilter {
-    Open,
-    Done,
-}
-
-/// Resolve a goal number or picker choice. Numbers are the ones shown by
-/// `trk goal list`, which numbers every goal; the filter decides whether an
-/// open or a done goal is acceptable.
-fn resolve_goal_index(
-    doc: &Doc,
-    index: Option<usize>,
-    ui: &mut dyn Ui,
-    filter: GoalFilter,
-) -> Result<u64, TrkError> {
-    let wanted = |g: &Goal| match filter {
-        GoalFilter::Open => g.is_open(),
-        GoalFilter::Done => !g.is_open(),
-    };
-    match index {
-        Some(n) if n >= 1 => {
-            let goal = doc
-                .goals
-                .get(n - 1)
-                .ok_or_else(|| TrkError::Usage(format!("no goal number {n}")))?;
-            if !wanted(goal) {
-                return Err(TrkError::Usage(match filter {
-                    GoalFilter::Open => format!("goal {n} is not open"),
-                    GoalFilter::Done => format!("goal {n} is not done"),
-                }));
-            }
-            Ok(goal.id)
-        }
-        Some(n) => Err(TrkError::Usage(format!("no goal number {n}"))),
-        None => {
-            let rows: Vec<PickRow> = doc
-                .goals
-                .iter()
-                .enumerate()
-                .filter(|(_, g)| wanted(g))
-                .map(|(i, g)| PickRow {
-                    id: g.id,
-                    label: format!("{:>2}  {}", i + 1, g.title),
-                    number: Some(i + 1),
-                    current: doc.active == Some(g.id),
-                })
-                .collect();
-            if rows.is_empty() {
-                return Err(TrkError::Usage(match filter {
-                    GoalFilter::Open => "no open goals".into(),
-                    GoalFilter::Done => "no done goals".into(),
-                }));
-            }
-            let initial = rows.iter().position(|r| r.current).unwrap_or(0);
-            let spec = PickSpec {
-                header: match filter {
-                    GoalFilter::Open => "switch to which goal?".into(),
-                    GoalFilter::Done => "reopen which goal?".into(),
-                },
-                rows,
-                initial,
-            };
-            match ui.pick(&spec)? {
-                PickResult::Chosen(id) => Ok(id),
-                PickResult::Cancel => Err(TrkError::Cancelled),
-            }
-        }
-    }
-}
-
-fn inbox_command(ctx: &Ctx, ui: &mut dyn Ui, args: InboxArgs) -> Result<i32, TrkError> {
-    match args.command {
-        None => {
-            let store = active_store(ctx);
-            let doc = store.read()?;
-            print_lines(ctx, &views::inbox_view(&doc, ctx.wrap, ctx.style()));
-            Ok(0)
-        }
-        Some(InboxCommand::Drop(a)) => {
-            let store = active_store(ctx);
-            let doc = store.read()?;
-            let id = match a.index {
-                Some(n) => doc
-                    .inbox
-                    .get(n.saturating_sub(1))
-                    .map(|i| i.id)
-                    .ok_or_else(|| TrkError::Usage(format!("inbox drop: no item {n}")))?,
-                None => {
-                    let rows: Vec<PickRow> = doc
-                        .inbox
-                        .iter()
-                        .enumerate()
-                        .map(|(i, item)| PickRow {
-                            id: item.id,
-                            label: format!("{:>2}  {}", i + 1, item.text),
-                            number: Some(i + 1),
-                            current: false,
-                        })
-                        .collect();
-                    let spec = PickSpec {
-                        header: "drop which item?".into(),
-                        rows,
-                        initial: 0,
-                    };
-                    match ui.pick(&spec)? {
-                        PickResult::Chosen(id) => id,
-                        PickResult::Cancel => return Err(TrkError::Cancelled),
-                    }
-                }
-            };
-            mutate(ctx, "inbox drop", &Request::InboxDrop { id })
-        }
-        Some(InboxCommand::Take(a)) => {
-            let store = active_store(ctx);
-            let doc = store.read()?;
-            let item = match a.index {
-                Some(n) => doc
-                    .inbox
-                    .get(n.saturating_sub(1))
-                    .cloned()
-                    .ok_or_else(|| TrkError::Usage(format!("inbox take: no item {n}")))?,
-                None if doc.inbox.len() == 1 => doc.inbox[0].clone(),
-                None => {
-                    let rows: Vec<PickRow> = doc
-                        .inbox
-                        .iter()
-                        .enumerate()
-                        .map(|(i, item)| PickRow {
-                            id: item.id,
-                            label: format!("{:>2}  {}", i + 1, item.text),
-                            number: Some(i + 1),
-                            current: false,
-                        })
-                        .collect();
-                    let spec = PickSpec {
-                        header: "take which item?".into(),
-                        rows,
-                        initial: 0,
-                    };
-                    let id = match ui.pick(&spec)? {
-                        PickResult::Chosen(id) => id,
-                        PickResult::Cancel => return Err(TrkError::Cancelled),
-                    };
-                    doc.inbox
-                        .iter()
-                        .find(|i| i.id == id)
-                        .cloned()
-                        .ok_or_else(|| TrkError::Message("item vanished".into()))?
-                }
-            };
-
-            let (goal_id, new_goal) = if let Some(title) = &a.new_goal {
-                (None, Some(title.clone()))
-            } else if let Some(name) = &a.goal {
-                let needle = name.to_ascii_lowercase();
-                let matches: Vec<&Goal> = doc
-                    .goals
-                    .iter()
-                    .filter(|g| g.is_open() && g.title.to_ascii_lowercase().contains(&needle))
-                    .collect();
-                match matches.len() {
-                    1 => (Some(matches[0].id), None),
-                    0 => return Err(TrkError::Usage(format!("no goal matches \"{name}\""))),
-                    _ => {
-                        return Err(TrkError::Usage(format!(
-                            "\"{name}\" matches {} goals",
-                            matches.len()
-                        )));
-                    }
-                }
-            } else {
-                let rows: Vec<PickRow> = doc
-                    .goals
-                    .iter()
-                    .filter(|g| g.is_open())
-                    .enumerate()
-                    .map(|(i, g)| PickRow {
-                        id: g.id,
-                        label: format!("{:>2}  {}", i + 1, g.title),
-                        number: Some(i + 1),
-                        current: doc.active == Some(g.id),
-                    })
-                    .collect();
-                if rows.is_empty() {
-                    return Err(TrkError::Usage(
-                        "inbox take: no open goals; use --new-goal".into(),
-                    ));
-                }
-                let initial = rows.iter().position(|r| r.current).unwrap_or(0);
-                let spec = PickSpec {
-                    header: "put it in which goal?".into(),
-                    rows,
-                    initial,
-                };
-                match ui.pick(&spec)? {
-                    PickResult::Chosen(id) => (Some(id), None),
-                    PickResult::Cancel => return Err(TrkError::Cancelled),
-                }
-            };
-
-            let parent = if a.switch {
-                let goal = goal_id.and_then(|id| doc.goal(id)).ok_or_else(|| {
-                    TrkError::Usage("inbox take: --switch needs an existing goal with tasks".into())
-                })?;
-                match switch_target(ctx, ui, goal, "put it under which task?", false)? {
-                    Target::Task(id) => Some(id),
-                    Target::Current => None,
-                }
-            } else {
-                None
-            };
-
-            let why = {
-                if !ctx.config.prompt_why || !ctx.interactive() {
-                    None
-                } else {
-                    match ui.ask("why? ")? {
-                        Some(t) if !t.trim().is_empty() => Some(t),
-                        _ => None,
-                    }
-                }
-            };
-
-            mutate(
-                ctx,
-                "inbox take",
-                &Request::InboxTake {
-                    id: item.id,
-                    goal: goal_id,
-                    new_goal,
-                    parent,
-                    why,
-                    switch: a.activate,
-                },
-            )
         }
     }
 }
@@ -954,11 +663,11 @@ fn inbox_command(ctx: &Ctx, ui: &mut dyn Ui, args: InboxArgs) -> Result<i32, Trk
 fn log_command(ctx: &Ctx, args: LogArgs) -> Result<i32, TrkError> {
     let store = active_store(ctx);
     let doc = store.read()?;
-    let today = now(ctx).date_naive();
+    let today = ctx.clock.now().date_naive();
     let days = parse_log_when(&join_text(&args.when), today)?;
     print_lines(
         ctx,
-        &views::log_view(&doc, today, &days, ctx.wrap, ctx.style()),
+        &views::log_view(&doc, &days, ctx.clock.now(), ctx.wrap, ctx.style()),
     );
     Ok(0)
 }
@@ -982,271 +691,204 @@ fn parse_log_when(spec: &str, today: NaiveDate) -> Result<Vec<NaiveDate>, TrkErr
     ))
 }
 
-fn at_command(ctx: &Ctx, ui: &mut dyn Ui, args: AtArgs) -> Result<i32, TrkError> {
-    let target = resolved_target(ctx, ui, args.switch, "which task?")?;
-    if args.clear {
-        return mutate(ctx, "at", &Request::Schedule { target, at: None });
-    }
-    let spec = join_text(&args.when);
-    let schedule = if spec.trim().is_empty() {
-        if ctx.interactive() {
-            let date = ui.ask("date (YYYY-MM-DD, today, tomorrow, mon..sun, +Nd): ")?;
-            let time = ui.ask("time (HH:MM, Enter for none): ")?;
-            let tokens: Vec<String> = date.into_iter().chain(time).collect::<Vec<String>>();
-            parse_schedule_tokens(&tokens, now(ctx))?
-        } else {
-            return Err(TrkError::Usage("at: give a date".into()));
-        }
-    } else {
-        parse_schedule_tokens(&args.when, now(ctx))?
+// ---------------------------------------------------------------------------
+// Shell completions.
+// ---------------------------------------------------------------------------
+
+fn completions_command(args: CompletionsArgs) -> Result<i32, TrkError> {
+    let shell = match args.shell {
+        Some(shell) => shell,
+        None => detect_shell()?,
     };
-    mutate(
-        ctx,
-        "at",
-        &Request::Schedule {
-            target,
-            at: Some(schedule),
-        },
-    )
+    let path = install_completions(shell)?;
+    println!("installed {} completions: {}", shell.name(), path.display());
+    if matches!(shell, Shell::Zsh) {
+        println!("  add to ~/.zshrc: fpath=(~/.zfunc $fpath)");
+    }
+    Ok(0)
 }
 
-fn parse_schedule_tokens(
-    tokens: &[String],
-    now: DateTime<FixedOffset>,
-) -> Result<Schedule, TrkError> {
-    let grammar = "at: date (today, tomorrow, mon..sun, YYYY-MM-DD, +Nd) and time (HH:MM, 3pm)";
-    let lower: Vec<String> = tokens
-        .iter()
-        .map(|t| t.trim().to_ascii_lowercase())
-        .filter(|t| !t.is_empty())
-        .collect();
-    match lower.len() {
-        0 => Err(TrkError::Usage(grammar.into())),
-        1 => {
-            if let Some(date) = parse_date_token(&lower[0], now.date_naive()) {
-                Ok(Schedule::Date(date))
-            } else if let Some(time) = parse_time_token(&lower[0]) {
-                time_only(time, now).ok_or_else(|| TrkError::Usage(grammar.into()))
-            } else {
-                Err(TrkError::Usage(grammar.into()))
-            }
+fn detect_shell() -> Result<Shell, TrkError> {
+    if let Ok(shell) = std::env::var("SHELL") {
+        let name = Path::new(&shell)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        if name.contains("zsh") {
+            return Ok(Shell::Zsh);
         }
-        2 => {
-            let date = parse_date_token(&lower[0], now.date_naive())
-                .ok_or_else(|| TrkError::Usage(grammar.into()))?;
-            let time =
-                parse_time_token(&lower[1]).ok_or_else(|| TrkError::Usage(grammar.into()))?;
-            combine(date, time, now).ok_or_else(|| TrkError::Usage(grammar.into()))
+        if name.contains("bash") {
+            return Ok(Shell::Bash);
         }
-        _ => Err(TrkError::Usage(grammar.into())),
-    }
-}
-
-fn parse_date_token(token: &str, today: NaiveDate) -> Option<NaiveDate> {
-    match token {
-        "today" => return Some(today),
-        "tomorrow" => return Some(today + chrono::Duration::days(1)),
-        _ => {}
-    }
-    if let Some(rest) = token.strip_prefix('+')
-        && let Some(days) = rest.strip_suffix('d')
-        && let Ok(n) = days.parse::<i64>()
-    {
-        return Some(today + chrono::Duration::days(n));
-    }
-    let weekdays = [
-        ("mon", 0u64),
-        ("tue", 1),
-        ("wed", 2),
-        ("thu", 3),
-        ("fri", 4),
-        ("sat", 5),
-        ("sun", 6),
-    ];
-    for (name, dow) in weekdays {
-        if token.starts_with(name) {
-            use chrono::Datelike;
-            let current = today.weekday().num_days_from_monday() as u64;
-            let mut delta = (dow + 7 - current) % 7;
-            if delta == 0 {
-                delta = 7;
-            }
-            return Some(today + chrono::Duration::days(delta as i64));
+        if name.contains("fish") {
+            return Ok(Shell::Fish);
+        }
+        if name.contains("pwsh") || name.contains("powershell") {
+            return Ok(Shell::Powershell);
+        }
+        if name.contains("elvish") {
+            return Ok(Shell::Elvish);
+        }
+        if name.contains("sh") {
+            return Ok(Shell::Sh);
         }
     }
-    NaiveDate::parse_from_str(token, "%Y-%m-%d").ok()
+    Err(TrkError::Usage(
+        "completions: could not detect the shell; pass sh, bash, zsh, fish, powershell, or elvish"
+            .into(),
+    ))
 }
 
-fn parse_time_token(token: &str) -> Option<NaiveTime> {
-    if let Ok(t) = NaiveTime::parse_from_str(token, "%H:%M") {
-        return Some(t);
-    }
-    let (digits, meridiem) = if let Some(d) = token.strip_suffix("am") {
-        (d, "am")
-    } else {
-        let d = token.strip_suffix("pm")?;
-        (d, "pm")
-    };
-    let mut hour: u32 = digits.parse().ok()?;
-    if hour > 12 {
-        return None;
-    }
-    if meridiem == "pm" && hour != 12 {
-        hour += 12;
-    }
-    if meridiem == "am" && hour == 12 {
-        hour = 0;
-    }
-    NaiveTime::from_hms_opt(hour, 0, 0)
-}
-
-fn combine(date: NaiveDate, time: NaiveTime, now: DateTime<FixedOffset>) -> Option<Schedule> {
-    let naive = NaiveDateTime::new(date, time);
-    now.offset()
-        .from_local_datetime(&naive)
-        .single()
-        .map(Schedule::DateTime)
-}
-
-fn time_only(time: NaiveTime, now: DateTime<FixedOffset>) -> Option<Schedule> {
-    let mut date = now.date_naive();
-    let candidate = combine(date, time, now)?;
-    if let Schedule::DateTime(dt) = &candidate
-        && dt <= &now
-    {
-        date += chrono::Duration::days(1);
-        return combine(date, time, now);
-    }
-    Some(candidate)
-}
-
-/// `trk prompt`: never fails, never prompts, never takes the lock (spec 8.19).
-pub fn prompt_command(color_flag: Option<Toggle>, args: PromptArgs) -> i32 {
-    let Some((config, path)) = load_config_quiet() else {
-        return 0;
-    };
-    let ctx = Ctx::new(config, path, color_flag);
-    let text = prompt_text(&ctx, args.max);
-    print!("{text}");
-    0
-}
-
-fn load_config_quiet() -> Option<(Config, Option<PathBuf>)> {
-    let path = config::config_path();
-    if let Some(p) = &path
-        && p.exists()
-    {
-        let (mut cfg, _) = Config::from_path(p).ok()?;
-        apply_store_override(&mut cfg).ok()?;
-        return Some((cfg, Some(p.clone())));
-    }
-    if let Some(store) = env_store() {
-        let mut cfg = Config::with_store(store).ok()?;
-        apply_store_override(&mut cfg).ok()?;
-        return Some((cfg, path));
-    }
-    None
-}
-
-pub fn undo_doc(ctx: &Ctx, n: usize) -> Result<Option<Doc>, TrkError> {
-    let ring = undo_ring(ctx);
-    match ring.pop(n)? {
-        None => Ok(None),
-        Some((_label, text)) => {
-            let doc = crate::store::format::parse(&text)?;
-            let store = active_store(ctx);
-            let lock = store.lock()?;
-            store.save(&doc)?;
-            drop(lock);
-            Ok(Some(doc))
-        }
-    }
-}
-
-fn print_completions(args: CompletionsArgs) {
+fn install_completions(shell: Shell) -> Result<PathBuf, TrkError> {
     use clap::CommandFactory;
     use clap_complete::{Shell as CS, generate};
-    let shell = match args.shell {
-        Shell::Bash => CS::Bash,
+
+    let cs = match shell {
+        Shell::Sh | Shell::Bash => CS::Bash,
         Shell::Zsh => CS::Zsh,
         Shell::Fish => CS::Fish,
         Shell::Powershell => CS::PowerShell,
         Shell::Elvish => CS::Elvish,
     };
     let mut cmd = Cli::command();
-    generate(shell, &mut cmd, "trk", &mut std::io::stdout());
+    let mut buf = Vec::new();
+    generate(cs, &mut cmd, "trk", &mut buf);
+
+    let path = completion_path(shell)?;
+    install_file(&path, &buf)?;
+    Ok(path)
 }
 
-/// Best-effort prompt text for `trk prompt` (spec 8.19): never fails, never
-/// takes the lock.
-pub fn prompt_text(ctx: &Ctx, max: usize) -> String {
-    let store = active_store(ctx);
-    let Ok(doc) = store.read() else {
-        return String::new();
-    };
-    let Some(goal) = doc.active_goal() else {
-        return String::new();
-    };
-    let Some(cursor) = goal.cursor else {
-        return String::new();
-    };
-    let Some(task) = goal.find(cursor) else {
-        return String::new();
-    };
-    crate::ui::wrap::truncate(&task.text, max, ctx.style().ellipsis())
+fn completion_path(shell: Shell) -> Result<PathBuf, TrkError> {
+    let home = dirs::home_dir()
+        .ok_or_else(|| TrkError::Message("no home directory; cannot install completions".into()))?;
+    Ok(match shell {
+        Shell::Sh | Shell::Bash => home.join(".local/share/bash-completion/completions/trk"),
+        Shell::Zsh => home.join(".zfunc/_trk"),
+        Shell::Fish => home.join(".config/fish/completions/trk.fish"),
+        Shell::Powershell => home.join(".config/powershell/trk.ps1"),
+        Shell::Elvish => home.join(".config/elvish/lib/trk.elv"),
+    })
 }
 
-/// Read-only helpers for the TUI.
-pub fn load_doc(ctx: &Ctx) -> Result<Doc, TrkError> {
-    active_store(ctx).read()
-}
-
-pub fn save_doc(ctx: &Ctx, label: &str, doc: &Doc) -> Result<(), TrkError> {
-    let store = active_store(ctx);
-    let lock = store.lock()?;
-    let before_text = fs::read_to_string(&store.path).ok();
-    if let Some(before) = &before_text {
-        undo_ring(ctx).snapshot(before, label)?;
+fn install_file(path: &Path, bytes: &[u8]) -> Result<(), TrkError> {
+    if let Some(parent) = path.parent()
+        && let Err(e) = fs::create_dir_all(parent)
+    {
+        if e.kind() != std::io::ErrorKind::PermissionDenied {
+            return Err(e.into());
+        }
+        elevated_mkdir(parent)?;
     }
-    store.save(doc)?;
-    drop(lock);
-    Ok(())
+    match fs::write(path, bytes) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => elevated_write(path, bytes),
+        Err(e) => Err(e.into()),
+    }
 }
 
-pub fn apply_doc(
-    doc: &Doc,
-    request: &Request,
-    now: DateTime<FixedOffset>,
-) -> Result<(Doc, Outcome), TrkError> {
-    Ok(ops::apply(doc, request, now)?)
+#[cfg(unix)]
+fn elevated_mkdir(dir: &Path) -> Result<(), TrkError> {
+    let status = std::process::Command::new("sudo")
+        .arg("mkdir")
+        .arg("-p")
+        .arg(dir)
+        .status()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(TrkError::Message("sudo mkdir failed".into()))
+    }
 }
 
-pub fn clock_now(ctx: &Ctx) -> DateTime<FixedOffset> {
-    ctx.clock.now()
+#[cfg(not(unix))]
+fn elevated_mkdir(_dir: &Path) -> Result<(), TrkError> {
+    Err(TrkError::Message(
+        "cannot create the completion directory: permission denied".into(),
+    ))
 }
 
-pub fn local_now() -> DateTime<FixedOffset> {
-    Local::now().fixed_offset()
+#[cfg(unix)]
+fn elevated_write(path: &Path, bytes: &[u8]) -> Result<(), TrkError> {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let mut child = Command::new("sudo")
+        .arg("tee")
+        .arg(path)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()?;
+    child
+        .stdin
+        .take()
+        .expect("sudo tee has a piped stdin")
+        .write_all(bytes)?;
+    let status = child.wait()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(TrkError::Message("sudo tee failed".into()))
+    }
 }
+
+#[cfg(not(unix))]
+fn elevated_write(_path: &Path, _bytes: &[u8]) -> Result<(), TrkError> {
+    Err(TrkError::Message(
+        "cannot write the completion file: permission denied".into(),
+    ))
+}
+
+// ---------------------------------------------------------------------------
+// Tests.
+// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::ops::{Request, apply};
+    use chrono::{DateTime, FixedOffset};
 
-    fn row(id: u64, number: usize, current: bool) -> PickRow {
-        PickRow {
-            id,
-            label: format!("{number}"),
-            number: Some(number),
-            current,
-        }
+    fn dt(s: &str) -> DateTime<FixedOffset> {
+        DateTime::parse_from_rfc3339(s).unwrap()
     }
 
     #[test]
-    fn picker_initial_prefers_current_or_newest() {
-        let rows = vec![row(10, 1, false), row(11, 2, true), row(12, 3, false)];
-        assert_eq!(picker_initial(&rows, false), 1, "current task");
-        assert_eq!(picker_initial(&rows, true), 2, "highest id");
-        assert_eq!(picker_initial(&[], true), 0, "empty defaults to zero");
+    fn task_rows_number_only_unfinished_when_asked() {
+        let doc =
+            crate::store::format::parse(include_str!("../../tests/fixtures/basic.trk")).unwrap();
+        let goal = doc.active_goal().unwrap();
+        let all = task_rows(goal, false);
+        let open = task_rows(goal, true);
+        assert!(all.len() > open.len());
+        assert!(open.iter().all(|r| r.number.is_some()));
+    }
+
+    #[test]
+    fn require_text_rejects_empty() {
+        assert!(require_text("add", &[]).is_err());
+        assert_eq!(
+            require_text("add", &["a".into(), "b".into()]).unwrap(),
+            "a b"
+        );
+    }
+
+    #[test]
+    fn progress_marks_running_timer() {
+        let doc =
+            crate::store::format::parse(include_str!("../../tests/fixtures/basic.trk")).unwrap();
+        let (doc, _) = apply(&doc, &Request::Time, dt("2026-10-07T10:00:00-05:00")).unwrap();
+        let lines = views::progress_view(
+            &doc,
+            dt("2026-10-07T10:05:00-05:00"),
+            80,
+            style::Style::new(false, true),
+        );
+        let text: String = lines
+            .iter()
+            .map(|l| l.text())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(text.contains("(running)"), "{text}");
     }
 }

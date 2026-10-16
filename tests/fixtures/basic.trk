@@ -1,0 +1,14 @@
+trk 1
+next g=2 t=5 i=1
+active g1
+
+goal g1 open 2026-10-07T09:00:00-05:00 Ship login fix
+  current t3
+  last t3
+  [ ] t1 2026-10-07T09:01:00-05:00 Fix login bug
+    [ ] t2 2026-10-07T09:02:00-05:00 Reproduce on staging
+      [ ] t3 2026-10-07T09:03:00-05:00 Get staging creds
+        | can't log in
+  [x] t4 2026-10-07T09:04:00-05:00 Call internet company
+    @ done=2026-10-07T11:00:00-05:00
+    @ spent=600

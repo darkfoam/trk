@@ -19,11 +19,25 @@ impl ColorArg {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub enum Shell {
+    Sh,
     Bash,
     Zsh,
     Fish,
     Powershell,
     Elvish,
+}
+
+impl Shell {
+    pub fn name(self) -> &'static str {
+        match self {
+            Shell::Sh => "sh",
+            Shell::Bash => "bash",
+            Shell::Zsh => "zsh",
+            Shell::Fish => "fish",
+            Shell::Powershell => "powershell",
+            Shell::Elvish => "elvish",
+        }
+    }
 }
 
 #[derive(Parser, Debug)]
@@ -47,61 +61,45 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    /// Add X: a new task under the current task; you descend.
+    /// Add a task under the goal.
     Add(AddArgs),
-    /// Goal by X: a direct task under the active goal.
-    By(ByArgs),
-    /// Once this is done, then X: make X the parent of a picked task.
+    /// Add a task as a parent of the most recently added task.
     Then(ThenArgs),
-    /// And X: another task at the same level as the target.
+    /// Add a task as a sibling of the most recently added task.
     And(AndArgs),
-    /// Finish the current task and walk back up.
+    /// Add a task as a sibling before the most recently added task.
+    Before(BeforeArgs),
+    /// Complete the current task.
     #[command(alias = "d")]
     Done(DoneArgs),
-    /// Abandon the current task.
+    /// Start timing the current task.
+    Time,
+    /// Stop timing the current task.
+    Stop,
+    /// Delete a task, using the picker.
     Drop(DropArgs),
-    /// Leave the current task unfinished, with a reason.
-    #[command(alias = "s")]
-    Stop(StopArgs),
-    /// Resume the current task; show how I got here.
-    Go,
-    /// Chain of notes from the root to the current task.
-    #[command(alias = "w")]
-    Why(WhyArgs),
-    /// Read or add note lines on a task.
-    #[command(alias = "n")]
-    Note(NoteArgs),
-    /// Change a task's text.
-    Rename(RenameArgs),
-    /// Switch to another task.
+    /// Switch tasks using the picker.
     Switch(SwitchArgs),
-    /// The whole task tree of the active goal.
+    /// Show the current task, its siblings, and its parents.
     #[command(alias = "l")]
     List(ListArgs),
     /// Undo the last N changes.
     #[command(alias = "u")]
     Undo(UndoArgs),
-    /// Goals: show, list, new, switch, done, rename, reopen.
-    #[command(alias = "g")]
-    Goal(GoalArgs),
-    /// Quick capture to the inbox.
+    /// Create a goal.
+    New(NewArgs),
+    /// Show the whole goal as a tree with progress.
+    Progress(ProgressArgs),
+    /// Delete a goal and every task under it.
+    Delete(DeleteArgs),
+    /// Capture a task in the inbox.
     #[command(alias = "i")]
     Jot(JotArgs),
-    /// View the inbox, take or drop items.
-    Inbox(InboxArgs),
+    /// Open the inbox in the picker.
+    Inbox,
     /// What got finished, by day.
     Log(LogArgs),
-    /// Schedule a task.
-    At(AtArgs),
-    /// Scheduled tasks across all goals.
-    Agenda,
-    /// Live task list in a terminal pane.
-    Start(StartArgs),
-    /// Where the task list lives.
-    Config(ConfigArgs),
-    /// One short line for a shell prompt.
-    Prompt(PromptArgs),
-    /// Print shell completion script.
+    /// Install shell completions for the detected shell.
     Completions(CompletionsArgs),
 }
 
@@ -109,13 +107,7 @@ pub enum Command {
 pub struct AddArgs {
     #[arg(value_name = "TEXT")]
     pub text: Vec<String>,
-    /// Switch to choose the parent task instead of using the current task.
-    #[arg(short = 's', visible_short_alias = 'p', long)]
-    pub switch: bool,
-    /// Do not move the cursor onto the new task.
-    #[arg(short = 'n', long)]
-    pub stay: bool,
-    /// Supply the why inline (skips the prompt).
+    /// Explain why this task exists (skips the prompt).
     #[arg(short = 'w', long, value_name = "WHY")]
     pub why: Option<String>,
     /// Do not ask for a why.
@@ -124,24 +116,16 @@ pub struct AddArgs {
 }
 
 #[derive(clap::Args, Debug)]
-pub struct ByArgs {
-    #[arg(value_name = "TEXT")]
-    pub text: Vec<String>,
-    #[arg(short = 'w', long, value_name = "WHY")]
-    pub why: Option<String>,
-    #[arg(long)]
-    pub no_why: bool,
-}
-
-#[derive(clap::Args, Debug)]
 pub struct ThenArgs {
     #[arg(value_name = "TEXT")]
     pub text: Vec<String>,
-    /// Use the current task instead of picking one.
-    #[arg(short = 'c', long)]
-    pub current: bool,
+    /// Wrap the current task instead of the most recently added one.
+    #[arg(short = 'n', long)]
+    pub next: bool,
+    /// Explain why this task exists (skips the prompt).
     #[arg(short = 'w', long, value_name = "WHY")]
     pub why: Option<String>,
+    /// Do not ask for a why.
     #[arg(long)]
     pub no_why: bool,
 }
@@ -150,10 +134,22 @@ pub struct ThenArgs {
 pub struct AndArgs {
     #[arg(value_name = "TEXT")]
     pub text: Vec<String>,
-    #[arg(short = 's', visible_short_alias = 'p', long)]
-    pub switch: bool,
+    /// Explain why this task exists (skips the prompt).
     #[arg(short = 'w', long, value_name = "WHY")]
     pub why: Option<String>,
+    /// Do not ask for a why.
+    #[arg(long)]
+    pub no_why: bool,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct BeforeArgs {
+    #[arg(value_name = "TEXT")]
+    pub text: Vec<String>,
+    /// Explain why this task exists (skips the prompt).
+    #[arg(short = 'w', long, value_name = "WHY")]
+    pub why: Option<String>,
+    /// Do not ask for a why.
     #[arg(long)]
     pub no_why: bool,
 }
@@ -167,58 +163,33 @@ pub struct DoneArgs {
 
 #[derive(clap::Args, Debug)]
 pub struct DropArgs {
-    #[arg(short = 'f', long)]
-    pub force: bool,
-    #[arg(short = 'w', long, value_name = "WHY")]
-    pub why: Option<String>,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct StopArgs {
-    #[arg(value_name = "REASON")]
-    pub reason: Vec<String>,
-    #[arg(short = 's', visible_short_alias = 'p', long)]
-    pub switch: bool,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct WhyArgs {
-    #[arg(short = 's', visible_short_alias = 'p', long)]
-    pub switch: bool,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct NoteArgs {
-    #[arg(value_name = "TEXT")]
-    pub text: Vec<String>,
-    #[arg(short = 'r', long, value_name = "TEXT")]
-    pub replace: Option<String>,
-    #[arg(short = 'c', long)]
-    pub clear: bool,
-    #[arg(short = 's', visible_short_alias = 'p', long)]
-    pub switch: bool,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct RenameArgs {
-    #[arg(value_name = "TEXT")]
-    pub text: Vec<String>,
-    #[arg(short = 's', visible_short_alias = 'p', long)]
-    pub switch: bool,
+    /// Skip the confirmation prompt when the task has sub-tasks.
+    #[arg(short = 'y', long)]
+    pub yes: bool,
 }
 
 #[derive(clap::Args, Debug)]
 pub struct SwitchArgs {
-    #[arg(value_name = "N")]
-    pub index: Option<usize>,
+    #[command(subcommand)]
+    pub what: Option<SwitchWhat>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SwitchWhat {
+    /// Switch goals using the picker.
+    Goal,
 }
 
 #[derive(clap::Args, Debug)]
 pub struct ListArgs {
-    #[arg(short = 'a', long)]
-    pub all: bool,
-    #[arg(long)]
-    pub all_goals: bool,
+    #[command(subcommand)]
+    pub what: Option<ListWhat>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ListWhat {
+    /// List all goals.
+    Goal,
 }
 
 #[derive(clap::Args, Debug)]
@@ -228,59 +199,52 @@ pub struct UndoArgs {
 }
 
 #[derive(clap::Args, Debug)]
-pub struct GoalArgs {
+pub struct NewArgs {
     #[command(subcommand)]
-    pub command: Option<GoalCommand>,
+    pub what: NewWhat,
 }
 
 #[derive(Subcommand, Debug)]
-pub enum GoalCommand {
-    /// Print title, id, active marker, and counts.
-    Show,
-    /// Numbered list of goals.
-    List,
-    /// Create an open goal and make it active.
-    New(GoalNewArgs),
-    /// Make another open goal active.
-    Switch(GoalSwitchArgs),
-    /// Mark the active goal done.
-    Done(GoalDoneArgs),
-    /// Rename the active goal.
-    Rename(GoalRenameArgs),
-    /// Reopen a done goal and make it active.
-    Reopen(GoalReopenArgs),
+pub enum NewWhat {
+    /// Create a new goal and make it active.
+    Goal(NewGoalArgs),
 }
 
 #[derive(clap::Args, Debug)]
-pub struct GoalNewArgs {
-    #[arg(value_name = "TITLE")]
-    pub title: Vec<String>,
-    #[arg(short = 'n', long)]
-    pub stay: bool,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct GoalSwitchArgs {
-    #[arg(value_name = "N")]
-    pub index: Option<usize>,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct GoalDoneArgs {
-    #[arg(short = 'f', long)]
-    pub force: bool,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct GoalRenameArgs {
+pub struct NewGoalArgs {
     #[arg(value_name = "TITLE")]
     pub title: Vec<String>,
 }
 
 #[derive(clap::Args, Debug)]
-pub struct GoalReopenArgs {
-    #[arg(value_name = "N")]
-    pub index: Option<usize>,
+pub struct ProgressArgs {
+    #[command(subcommand)]
+    pub what: ProgressWhat,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ProgressWhat {
+    /// All tasks in this goal as a single tree.
+    Goal,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct DeleteArgs {
+    #[command(subcommand)]
+    pub what: DeleteWhat,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum DeleteWhat {
+    /// Delete a goal and all of its tasks.
+    Goal(DeleteGoalArgs),
+}
+
+#[derive(clap::Args, Debug)]
+pub struct DeleteGoalArgs {
+    /// Skip the confirmation prompt.
+    #[arg(short = 'y', long)]
+    pub yes: bool,
 }
 
 #[derive(clap::Args, Debug)]
@@ -290,87 +254,14 @@ pub struct JotArgs {
 }
 
 #[derive(clap::Args, Debug)]
-pub struct InboxArgs {
-    #[command(subcommand)]
-    pub command: Option<InboxCommand>,
-}
-
-#[derive(Subcommand, Debug)]
-pub enum InboxCommand {
-    /// Take an item out of the inbox into a goal.
-    Take(InboxTakeArgs),
-    /// Drop an item from the inbox.
-    Drop(InboxDropArgs),
-}
-
-#[derive(clap::Args, Debug)]
-pub struct InboxTakeArgs {
-    #[arg(value_name = "N")]
-    pub index: Option<usize>,
-    #[arg(long, value_name = "NAME")]
-    pub goal: Option<String>,
-    #[arg(long, value_name = "TITLE")]
-    pub new_goal: Option<String>,
-    /// Switch to choose the parent task instead of making a root.
-    #[arg(short = 's', visible_short_alias = 'p', long)]
-    pub switch: bool,
-    /// Make the chosen goal active.
-    #[arg(short = 'a', long)]
-    pub activate: bool,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct InboxDropArgs {
-    #[arg(value_name = "N")]
-    pub index: Option<usize>,
-}
-
-#[derive(clap::Args, Debug)]
 pub struct LogArgs {
     #[arg(value_name = "WHEN")]
     pub when: Vec<String>,
 }
 
 #[derive(clap::Args, Debug)]
-pub struct AtArgs {
-    #[arg(value_name = "WHEN")]
-    pub when: Vec<String>,
-    #[arg(short = 's', visible_short_alias = 'p', long)]
-    pub switch: bool,
-    /// Remove the schedule.
-    #[arg(long)]
-    pub clear: bool,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct StartArgs {
-    /// Start in focus view.
-    #[arg(long)]
-    pub focus: bool,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct ConfigArgs {
-    #[command(subcommand)]
-    pub command: Option<ConfigCommand>,
-}
-
-#[derive(Subcommand, Debug)]
-pub enum ConfigCommand {
-    /// Print effective values.
-    Show,
-    /// Print only the config file path.
-    Path,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct PromptArgs {
-    #[arg(long, default_value_t = 30)]
-    pub max: usize,
-}
-
-#[derive(clap::Args, Debug)]
 pub struct CompletionsArgs {
+    /// Install for this shell instead of auto-detecting.
     #[arg(value_enum)]
-    pub shell: Shell,
+    pub shell: Option<Shell>,
 }

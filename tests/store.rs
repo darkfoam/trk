@@ -26,7 +26,7 @@ fn concurrent_mutations_do_not_corrupt_the_store() {
     let dir = TempDir::new().unwrap();
     let store = dir.path().join("tasks.trk");
     let config = dir.path().join("config.toml");
-    run(&store, &config, &["goal", "new", "G"]);
+    run(&store, &config, &["new", "goal", "G"]);
 
     let threads: Vec<_> = (0..2)
         .map(|worker| {
@@ -34,7 +34,7 @@ fn concurrent_mutations_do_not_corrupt_the_store() {
             let config = config.clone();
             thread::spawn(move || {
                 for i in 0..15 {
-                    run(&store, &config, &["by", &format!("w{worker}-{i}")]);
+                    run(&store, &config, &["add", &format!("w{worker}-{i}")]);
                 }
             })
         })
@@ -63,9 +63,9 @@ fn undo_depth_is_respected() {
     );
     fs::write(&config, config_text).unwrap();
 
-    run(&store, &config, &["goal", "new", "G"]);
+    run(&store, &config, &["new", "goal", "G"]);
     for i in 0..5 {
-        run(&store, &config, &["by", &format!("t{i}")]);
+        run(&store, &config, &["add", &format!("t{i}")]);
     }
     for _ in 0..3 {
         run(&store, &config, &["undo"]);

@@ -95,6 +95,29 @@ goal g1 open 2026-10-07T09:00:00-05:00 G
     assert_eq!(serialize(&doc), text);
 }
 
+#[test]
+fn timers_and_the_last_added_pointer_round_trip() {
+    let text = "\
+trk 1
+next g=1 t=2 i=1
+active g1
+
+goal g1 open 2026-10-07T09:00:00-05:00 G
+  current t1
+  last t1
+  [ ] t1 2026-10-07T09:01:00-05:00 task
+    @ spent=90
+    @ running=2026-10-07T10:00:00-05:00
+";
+    let doc = parse(text).unwrap();
+    assert_eq!(serialize(&doc), text);
+    let goal = doc.active_goal().unwrap();
+    assert_eq!(goal.last_added, Some(1));
+    let task = goal.find(1).unwrap();
+    assert_eq!(task.spent, 90);
+    assert!(task.running.is_some());
+}
+
 fn ts(s: &str) -> DateTime<FixedOffset> {
     DateTime::parse_from_rfc3339(s).unwrap()
 }
@@ -128,14 +151,15 @@ fn done_on_task_with_children_is_blocked() {
 }
 
 #[test]
-fn then_parents_the_target_directly() {
-    let doc = goal_with_tree();
+fn then_parents_the_most_recently_added_task() {
+    let mut doc = goal_with_tree();
+    doc.active_goal_mut().unwrap().last_added = Some(3);
     let (next, _) = apply(
         &doc,
         &Request::Then {
             text: "Wrap".into(),
+            next: false,
             why: None,
-            target: Target::Task(3),
         },
         ts("2026-10-07T10:00:00-05:00"),
     )
@@ -148,12 +172,12 @@ fn then_parents_the_target_directly() {
         wrap.children[0].id, 3,
         "the new task becomes the direct parent of the target"
     );
-    // The new task is inserted where the target was, not at the root.
     assert!(
         goal.find(6).unwrap().find(7).is_some(),
         "the new parent sits under the target's old parent"
     );
     assert!(goal.find(7).unwrap().find(3).is_some());
+    assert_eq!(goal.last_added, Some(7));
     // The unrelated root is untouched.
     assert_eq!(goal.roots.len(), 2);
     assert!(goal.roots.iter().any(|r| r.id == 4));
@@ -227,6 +251,7 @@ fn validate_rejects_duplicate_ids() {
         status: GoalStatus::Open,
         created: ts("2026-10-07T09:00:00-05:00"),
         cursor: None,
+        last_added: None,
         roots: vec![
             Task::new(1, "x".into(), ts("2026-10-07T09:00:00-05:00")),
             Task::new(1, "y".into(), ts("2026-10-07T09:00:00-05:00")),

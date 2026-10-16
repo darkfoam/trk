@@ -45,10 +45,10 @@ pub struct Config {
     pub color: Toggle,
     pub wrap: usize,
     pub undo_depth: usize,
+    /// Ask "why?" when adding a task.
     pub prompt_why: bool,
     pub ascii: Toggle,
     pub current_color: ColorName,
-    pub poll_ms: u64,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -249,17 +249,6 @@ impl Config {
             None => true,
         };
 
-        let poll_ms = match table.get("poll_ms") {
-            Some(toml::Value::Integer(n)) if *n > 0 => *n as u64,
-            Some(_) => {
-                return Err(ConfigError::Invalid {
-                    path: path.to_path_buf(),
-                    message: "poll_ms: expected a positive integer".into(),
-                });
-            }
-            None => 500,
-        };
-
         let config = Config {
             store_raw,
             store,
@@ -272,7 +261,6 @@ impl Config {
             prompt_why,
             ascii,
             current_color,
-            poll_ms,
         };
         Ok((config, warnings))
     }
@@ -294,7 +282,6 @@ impl Config {
             prompt_why: true,
             ascii: Toggle::Auto,
             current_color: ColorName::default(),
-            poll_ms: 500,
         })
     }
 
@@ -321,8 +308,7 @@ impl Config {
              undo_depth = {undo}\n\
              prompt_why = {why}\n\
              ascii = \"{ascii}\"\n\
-             current_color = \"{current_color}\"\n\
-             poll_ms = {poll}\n",
+             current_color = \"{current_color}\"\n",
             store = self.store_raw,
             backups = self.backups_raw,
             color = self.color.as_str(),
@@ -331,7 +317,6 @@ impl Config {
             why = self.prompt_why,
             ascii = self.ascii.as_str(),
             current_color = self.current_color.as_str(),
-            poll = self.poll_ms,
         )
     }
 }
@@ -345,5 +330,6 @@ const KNOWN_KEYS: &[&str] = &[
     "prompt_why",
     "ascii",
     "current_color",
+    // Accepted from older versions, no longer used.
     "poll_ms",
 ];

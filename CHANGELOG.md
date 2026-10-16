@@ -8,6 +8,62 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** reworked the command set around three ways to add tasks. `trk
+  add X` now adds a top-level task under the goal, `trk then X` becomes the
+  parent of the most recently added task (`-n`/`--next` wraps the current task
+  instead), and `trk and X` follows the most recently added task as a sibling.
+  The most recently added task is remembered per goal, so `then` and `and`
+  chain across invocations.
+- **Breaking:** goal management is now spelled with a trailing `goal`: `trk new
+  goal <title>`, `trk list goal`, `trk progress goal`, `trk switch goal`, and
+  `trk delete goal` (with a `y/n` confirmation, or `--yes`).
+- **Breaking:** `trk list` is now a compact context view: the current task, its
+  siblings, and up to three parents, with a pointer at the current task. The
+  full tree moved to `trk progress goal`, where completed tasks are struck
+  through.
+- `trk drop` now asks for `y/n` confirmation when the chosen task has
+  sub-tasks; pass `--yes` to skip the prompt (required without a terminal).
+
+### Added
+
+- `scripts/install-local.sh` builds the release and installs the binary and man
+  page for the current user (`~/.local/bin` and `~/.local/share/man`), without
+  `sudo`, then refreshes the `whatis` index.
+- `trk before <text>` adds a sibling immediately *before* the most recently
+  added task, so a missing step can be slotted between two existing ones
+  (`add a`, `add b`, `before c` gives `a`, `c`, `b`).
+- `trk add`, `trk then`, and `trk and` take an optional **why**: `-w`/`--why`
+  supplies it inline, otherwise `trk` prompts (`why?`, Enter for none, or
+  `--no-why` to skip). The why is stored as a note and shown beneath the task in
+  `trk list` and `trk progress goal`.
+- `prompt_why` is back in the config (default `true`) to control the prompt.
+- `trk time` starts a timer on the current task; `trk stop` and `trk done` stop
+  it and add the elapsed time to a per-task total. Totals appear in `trk
+  progress goal` and `trk log`, and a running task is marked as such.
+- `trk completions` now installs completions for the detected shell into the
+  user's directories instead of printing a script, using `sudo` only when a
+  system path is needed.
+- `trk inbox` opens the inbox in the picker; TAB creates a new goal, and after
+  choosing a goal the item can be filed at the top level or under a task.
+
+### Removed
+
+- **Breaking:** the `by`, `go`, `why`, `note`, `rename`, `at`, and `agenda`
+  commands, along with task notes and scheduling (the store still reads files
+  that contain them so nothing is lost).
+- **Breaking:** the `start` live terminal pane, the `config` command, and the
+  `prompt` command. First-run setup still creates the config file.
+- **Breaking:** the `--why`/`--no-why`, `-s`/`--switch`, `-c`/`--current`, and
+  `-n`/`--stay` flags; `-n` is now `then --next`.
+- The `prompt_why` and `poll_ms` config keys.
+
+### Fixed
+
+- `trk drop` now deletes a task (and its subtree) for good, using a picker,
+  rather than marking it abandoned.
+
 ## [0.3.1] - 2026-10-08
 
 ### Added

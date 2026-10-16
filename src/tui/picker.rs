@@ -99,6 +99,7 @@ fn run_inner(
                 return Ok(PickResult::Cancel);
             }
             KeyCode::Esc | KeyCode::Char('q') => return Ok(PickResult::Cancel),
+            KeyCode::Tab if spec.allow_new => return Ok(PickResult::Create),
             KeyCode::Up | KeyCode::Char('k') => state.move_by(-1, len),
             KeyCode::Down | KeyCode::Char('j') => state.move_by(1, len),
             KeyCode::PageUp => state.move_by(-(rows as isize - 3), len),
@@ -108,6 +109,12 @@ fn run_inner(
             KeyCode::Char(c) if c.is_ascii_digit() => state.push_digit(c, &spec.rows),
             KeyCode::Backspace => state.backspace(),
             KeyCode::Enter => {
+                if len == 0 {
+                    if spec.allow_new {
+                        return Ok(PickResult::Create);
+                    }
+                    continue;
+                }
                 if let Some(idx) = state.resolve(&spec.rows) {
                     state.highlight = idx;
                 }
@@ -161,11 +168,7 @@ fn draw(
     }
     let footer = format!(
         "j/k move  \u{23ce} pick  esc cancel{}",
-        if state.typed.is_empty() {
-            String::new()
-        } else {
-            format!("  go to: {}", state.typed)
-        }
+        if spec.allow_new { "  tab new" } else { "" }
     );
     buf.push_str(&wrap::truncate(&footer, cols, style.ellipsis()));
     out.write_all(buf.as_bytes())?;
