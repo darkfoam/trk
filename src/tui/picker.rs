@@ -100,6 +100,9 @@ fn run_inner(
             }
             KeyCode::Esc | KeyCode::Char('q') => return Ok(PickResult::Cancel),
             KeyCode::Tab if spec.allow_new => return Ok(PickResult::Create),
+            KeyCode::Char('a') if spec.assign_date && !spec.rows.is_empty() => {
+                return Ok(PickResult::AssignDate(spec.rows[state.highlight].id));
+            }
             KeyCode::Up | KeyCode::Char('k') => state.move_by(-1, len),
             KeyCode::Down | KeyCode::Char('j') => state.move_by(1, len),
             KeyCode::PageUp => state.move_by(-(rows as isize - 3), len),
@@ -167,8 +170,9 @@ fn draw(
         buf.push_str("\r\n");
     }
     let footer = format!(
-        "j/k move  \u{23ce} pick  esc cancel{}",
-        if spec.allow_new { "  tab new" } else { "" }
+        "j/k move  \u{23ce} pick  esc cancel{}{}",
+        if spec.allow_new { "  tab new" } else { "" },
+        if spec.assign_date { "  a date" } else { "" }
     );
     buf.push_str(&wrap::truncate(&footer, cols, style.ellipsis()));
     out.write_all(buf.as_bytes())?;

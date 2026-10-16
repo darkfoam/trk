@@ -1,0 +1,235 @@
+trk 1
+next g=8 t=61 i=3
+active g1
+
+inbox
+  i1 2026-10-07T09:00:00-05:00 look into wal mode
+  i2 2026-10-07T09:05:00-05:00 book the flights
+
+goal g1 open 2026-10-05T09:00:00-05:00 Open goal: current, last and nesting
+  current t1
+  last t60
+  [ ] t1 2026-10-07T09:00:00-05:00 open: (none)
+    [ ] t2 2026-10-07T09:00:00-05:00 open: running
+      @ running=2026-10-07T09:30:00-05:00
+      [ ] t4 2026-10-07T09:00:00-05:00 open: spent, running
+        @ spent=600
+        @ running=2026-10-07T09:30:00-05:00
+    [ ] t3 2026-10-07T09:00:00-05:00 open: spent
+      @ spent=600
+  [ ] t5 2026-10-07T09:00:00-05:00 open: note
+    | a note
+  [ ] t6 2026-10-07T09:00:00-05:00 open: note, running
+    | a note
+    @ running=2026-10-07T09:30:00-05:00
+  [ ] t7 2026-10-07T09:00:00-05:00 open: note, spent
+    | a note
+    @ spent=600
+  [ ] t8 2026-10-07T09:00:00-05:00 open: note, spent, running
+    | a note
+    @ spent=600
+    @ running=2026-10-07T09:30:00-05:00
+  [ ] t9 2026-10-07T09:00:00-05:00 open: at=date
+    @ at=2026-10-09
+  [ ] t10 2026-10-07T09:00:00-05:00 open: at=date, running
+    @ at=2026-10-09
+    @ running=2026-10-07T09:30:00-05:00
+  [ ] t11 2026-10-07T09:00:00-05:00 open: at=date, spent
+    @ at=2026-10-09
+    @ spent=600
+  [ ] t12 2026-10-07T09:00:00-05:00 open: at=date, spent, running
+    @ at=2026-10-09
+    @ spent=600
+    @ running=2026-10-07T09:30:00-05:00
+  [ ] t13 2026-10-07T09:00:00-05:00 open: note, at=date
+    | a note
+    @ at=2026-10-09
+  [ ] t14 2026-10-07T09:00:00-05:00 open: note, at=date, running
+    | a note
+    @ at=2026-10-09
+    @ running=2026-10-07T09:30:00-05:00
+  [ ] t15 2026-10-07T09:00:00-05:00 open: note, at=date, spent
+    | a note
+    @ at=2026-10-09
+    @ spent=600
+  [ ] t16 2026-10-07T09:00:00-05:00 open: note, at=date, spent, running
+    | a note
+    @ at=2026-10-09
+    @ spent=600
+    @ running=2026-10-07T09:30:00-05:00
+  [ ] t17 2026-10-07T09:00:00-05:00 open: at=datetime
+    @ at=2026-10-09T15:00:00-05:00
+  [ ] t18 2026-10-07T09:00:00-05:00 open: at=datetime, running
+    @ at=2026-10-09T15:00:00-05:00
+    @ running=2026-10-07T09:30:00-05:00
+  [ ] t19 2026-10-07T09:00:00-05:00 open: at=datetime, spent
+    @ at=2026-10-09T15:00:00-05:00
+    @ spent=600
+  [ ] t20 2026-10-07T09:00:00-05:00 open: at=datetime, spent, running
+    @ at=2026-10-09T15:00:00-05:00
+    @ spent=600
+    @ running=2026-10-07T09:30:00-05:00
+  [ ] t21 2026-10-07T09:00:00-05:00 open: note, at=datetime
+    | a note
+    @ at=2026-10-09T15:00:00-05:00
+  [x] t25 2026-10-07T09:00:00-05:00 done: (none)
+    @ done=2026-10-07T11:00:00-05:00
+  [x] t26 2026-10-07T09:00:00-05:00 done: spent
+    @ done=2026-10-07T11:00:00-05:00
+    @ spent=600
+  [x] t27 2026-10-07T09:00:00-05:00 done: note
+    | a note
+    @ done=2026-10-07T11:00:00-05:00
+  [x] t28 2026-10-07T09:00:00-05:00 done: note, spent
+    | a note
+    @ done=2026-10-07T11:00:00-05:00
+    @ spent=600
+  [x] t29 2026-10-07T09:00:00-05:00 done: at=date
+    @ done=2026-10-07T11:00:00-05:00
+    @ at=2026-10-09
+  [x] t30 2026-10-07T09:00:00-05:00 done: at=date, spent
+    @ done=2026-10-07T11:00:00-05:00
+    @ at=2026-10-09
+    @ spent=600
+  [x] t31 2026-10-07T09:00:00-05:00 done: note, at=date
+    | a note
+    @ done=2026-10-07T11:00:00-05:00
+    @ at=2026-10-09
+  [x] t32 2026-10-07T09:00:00-05:00 done: note, at=date, spent
+    | a note
+    @ done=2026-10-07T11:00:00-05:00
+    @ at=2026-10-09
+    @ spent=600
+  [x] t33 2026-10-07T09:00:00-05:00 done: at=datetime
+    @ done=2026-10-07T11:00:00-05:00
+    @ at=2026-10-09T15:00:00-05:00
+  [x] t34 2026-10-07T09:00:00-05:00 done: at=datetime, spent
+    @ done=2026-10-07T11:00:00-05:00
+    @ at=2026-10-09T15:00:00-05:00
+    @ spent=600
+  [x] t35 2026-10-07T09:00:00-05:00 done: note, at=datetime
+    | a note
+    @ done=2026-10-07T11:00:00-05:00
+    @ at=2026-10-09T15:00:00-05:00
+  [-] t37 2026-10-07T09:00:00-05:00 dropped: (none)
+    @ dropped=2026-10-07T12:00:00-05:00
+  [-] t38 2026-10-07T09:00:00-05:00 dropped: spent
+    @ dropped=2026-10-07T12:00:00-05:00
+    @ spent=600
+  [-] t39 2026-10-07T09:00:00-05:00 dropped: note
+    | a note
+    @ dropped=2026-10-07T12:00:00-05:00
+  [-] t40 2026-10-07T09:00:00-05:00 dropped: note, spent
+    | a note
+    @ dropped=2026-10-07T12:00:00-05:00
+    @ spent=600
+  [-] t41 2026-10-07T09:00:00-05:00 dropped: at=date
+    @ dropped=2026-10-07T12:00:00-05:00
+    @ at=2026-10-09
+  [-] t42 2026-10-07T09:00:00-05:00 dropped: at=date, spent
+    @ dropped=2026-10-07T12:00:00-05:00
+    @ at=2026-10-09
+    @ spent=600
+  [-] t43 2026-10-07T09:00:00-05:00 dropped: note, at=date
+    | a note
+    @ dropped=2026-10-07T12:00:00-05:00
+    @ at=2026-10-09
+  [-] t44 2026-10-07T09:00:00-05:00 dropped: note, at=date, spent
+    | a note
+    @ dropped=2026-10-07T12:00:00-05:00
+    @ at=2026-10-09
+    @ spent=600
+  [-] t45 2026-10-07T09:00:00-05:00 dropped: at=datetime
+    @ dropped=2026-10-07T12:00:00-05:00
+    @ at=2026-10-09T15:00:00-05:00
+  [-] t46 2026-10-07T09:00:00-05:00 dropped: at=datetime, spent
+    @ dropped=2026-10-07T12:00:00-05:00
+    @ at=2026-10-09T15:00:00-05:00
+    @ spent=600
+  [-] t47 2026-10-07T09:00:00-05:00 dropped: note, at=datetime
+    | a note
+    @ dropped=2026-10-07T12:00:00-05:00
+    @ at=2026-10-09T15:00:00-05:00
+  [-] t48 2026-10-07T09:00:00-05:00 dropped: note, at=datetime, spent
+    | a note
+    @ dropped=2026-10-07T12:00:00-05:00
+    @ at=2026-10-09T15:00:00-05:00
+    @ spent=600
+  [!] t49 2026-10-07T09:00:00-05:00 stopped: (none)
+    ! waiting on review
+  [!] t50 2026-10-07T09:00:00-05:00 stopped: spent
+    ! waiting on review
+    @ spent=600
+  [!] t51 2026-10-07T09:00:00-05:00 stopped: note
+    | a note
+    ! waiting on review
+  [!] t52 2026-10-07T09:00:00-05:00 stopped: note, spent
+    | a note
+    ! waiting on review
+    @ spent=600
+  [!] t53 2026-10-07T09:00:00-05:00 stopped: at=date
+    ! waiting on review
+    @ at=2026-10-09
+  [!] t54 2026-10-07T09:00:00-05:00 stopped: at=date, spent
+    ! waiting on review
+    @ at=2026-10-09
+    @ spent=600
+  [!] t55 2026-10-07T09:00:00-05:00 stopped: note, at=date
+    | a note
+    ! waiting on review
+    @ at=2026-10-09
+  [!] t56 2026-10-07T09:00:00-05:00 stopped: note, at=date, spent
+    | a note
+    ! waiting on review
+    @ at=2026-10-09
+    @ spent=600
+  [!] t57 2026-10-07T09:00:00-05:00 stopped: at=datetime
+    ! waiting on review
+    @ at=2026-10-09T15:00:00-05:00
+  [!] t58 2026-10-07T09:00:00-05:00 stopped: at=datetime, spent
+    ! waiting on review
+    @ at=2026-10-09T15:00:00-05:00
+    @ spent=600
+  [!] t59 2026-10-07T09:00:00-05:00 stopped: note, at=datetime
+    | a note
+    ! waiting on review
+    @ at=2026-10-09T15:00:00-05:00
+  [!] t60 2026-10-07T09:00:00-05:00 stopped: note, at=datetime, spent
+    | a note
+    ! waiting on review
+    @ at=2026-10-09T15:00:00-05:00
+    @ spent=600
+
+goal g2 open 2026-10-05T10:00:00-05:00 Open goal: current only
+  current t22
+  [ ] t22 2026-10-07T09:00:00-05:00 open: note, at=datetime, running
+    | a note
+    @ at=2026-10-09T15:00:00-05:00
+    @ running=2026-10-07T09:30:00-05:00
+
+goal g3 open 2026-10-05T11:00:00-05:00 Open goal: last only
+  last t23
+  [ ] t23 2026-10-07T09:00:00-05:00 open: note, at=datetime, spent
+    | a note
+    @ at=2026-10-09T15:00:00-05:00
+    @ spent=600
+
+goal g4 open 2026-10-05T12:00:00-05:00 Open goal: no current or last
+  [ ] t24 2026-10-07T09:00:00-05:00 open: note, at=datetime, spent, running
+    | a note
+    @ at=2026-10-09T15:00:00-05:00
+    @ spent=600
+    @ running=2026-10-07T09:30:00-05:00
+
+goal g5 open 2026-10-05T13:00:00-05:00 Open goal: empty
+
+goal g6 done 2026-10-04T09:00:00-05:00 Done goal: with a task
+  @ done=2026-10-07T11:00:00-05:00
+  [x] t36 2026-10-07T09:00:00-05:00 done: note, at=datetime, spent
+    | a note
+    @ done=2026-10-07T11:00:00-05:00
+    @ at=2026-10-09T15:00:00-05:00
+    @ spent=600
+
+goal g7 done 2026-10-04T10:00:00-05:00 Done goal: empty
+  @ done=2026-10-07T11:00:00-05:00

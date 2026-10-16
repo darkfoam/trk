@@ -1,4 +1,4 @@
-.TH TRK 1 "2026-10-15" "trk 0.4.1" "User Commands"
+.TH TRK 1 "2026-10-15" "trk 0.5.0" "User Commands"
 .SH NAME
 trk \- adhd compliant task tracking
 .SH SYNOPSIS
@@ -82,12 +82,10 @@ useful: it wraps the
 .I current
 task instead of the most recently added one.
 .PP
-.B add
-,
-.B then
-,
-.B and
-, and
+.BR add ,
+.BR then ,
+.BR and ,
+and
 .B before
 each accept an optional
 .IR why :
@@ -188,6 +186,15 @@ are shown.
 .BR "trk switch"
 Choose the current task with the picker, over the open tasks of the active goal.
 .TP
+.BR "trk view"
+Browse the whole task list of the active goal in the picker. Press
+.B a
+to assign a date to the highlighted task \-\- \fItoday\fR, \fItomorrow\fR,
+\fI+Nd\fR, a weekday, or \fIYYYY\-MM\-DD\fR, or
+.B \-
+to clear it \-\- then the picker reopens. Dates are shown beside tasks; the view
+is otherwise read\-only (Enter or Esc closes it).
+.TP
 .BR "trk done " [\-f|\-\-force]
 Complete the current task and stop its timer. A task with open sub-tasks cannot
 be completed until they are done; pass
@@ -259,6 +266,16 @@ is
 or a
 .B YYYY\-MM\-DD
 date.
+.TP
+.BR "trk agenda"
+Print unfinished tasks grouped by the date they were assigned, org\-agenda style:
+overdue dates first, then each day in order, with times when a task carries one.
+Tasks assigned to
+.I today
+are emphasized in
+.B agenda_color
+(yellow by default). Assign dates with
+.BR "trk view" .
 .SS "Setup"
 .TP
 .BR "trk completions " [\fISHELL\fR]
@@ -374,6 +391,7 @@ undo_depth    = 50          # undo snapshots kept
 prompt_why    = true        # ask "why?" when adding a task
 ascii         = "auto"      # auto | always | never
 current_color = "green"     # color of the current task
+agenda_color  = "yellow"    # color of tasks assigned today in the agenda
 .RE
 .fi
 .PP
@@ -401,14 +419,17 @@ The current task is marked with
 .B >
 (ASCII) or a small triangle, the goal title is bold, the current task is bold in
 .BR current_color ,
-other tasks are dim green, and completed tasks are dim and struck through.
+other tasks are dim green, completed tasks are dim and struck through, and tasks
+assigned to today in the agenda are bold in
+.BR agenda_color .
 .PP
 Without a terminal, a picker prints its numbered choices to standard error and
 reads the number from standard input; an empty line accepts the highlighted
 default. This lets
 .BR switch ,
 .BR drop ,
-.BR delete goal ,
+.BR "delete goal" ,
+.BR view ,
 and
 .B inbox
 be driven from a script or pipeline.

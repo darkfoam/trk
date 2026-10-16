@@ -36,10 +36,12 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('drop', 'drop', [CompletionResultType]::ParameterValue, 'Delete a task, using the picker')
             [CompletionResult]::new('switch', 'switch', [CompletionResultType]::ParameterValue, 'Switch tasks using the picker')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'Show the current task, its siblings, and its parents')
+            [CompletionResult]::new('view', 'view', [CompletionResultType]::ParameterValue, 'Browse the whole task list, assigning dates to tasks')
             [CompletionResult]::new('undo', 'undo', [CompletionResultType]::ParameterValue, 'Undo the last N changes')
             [CompletionResult]::new('new', 'new', [CompletionResultType]::ParameterValue, 'Create a goal')
             [CompletionResult]::new('progress', 'progress', [CompletionResultType]::ParameterValue, 'Show the whole goal as a tree with progress')
             [CompletionResult]::new('delete', 'delete', [CompletionResultType]::ParameterValue, 'Delete a goal and every task under it')
+            [CompletionResult]::new('agenda', 'agenda', [CompletionResultType]::ParameterValue, 'Tasks by the date they are assigned, org-agenda style')
             [CompletionResult]::new('jot', 'jot', [CompletionResultType]::ParameterValue, 'Capture a task in the inbox')
             [CompletionResult]::new('inbox', 'inbox', [CompletionResultType]::ParameterValue, 'Open the inbox in the picker')
             [CompletionResult]::new('log', 'log', [CompletionResultType]::ParameterValue, 'What got finished, by day')
@@ -138,6 +140,12 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
         }
+        'trk;view' {
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
+            break
+        }
         'trk;undo' {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
@@ -181,6 +189,12 @@ Register-ArgumentCompleter -Native -CommandName 'trk' -ScriptBlock {
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-y', '-y', [CompletionResultType]::ParameterName, 'Skip the confirmation prompt')
             [CompletionResult]::new('--yes', '--yes', [CompletionResultType]::ParameterName, 'Skip the confirmation prompt')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
+            break
+        }
+        'trk;agenda' {
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'When to colorize output')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break

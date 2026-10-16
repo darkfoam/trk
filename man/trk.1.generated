@@ -1,6 +1,6 @@
 .ie \n(.g .ds Aq \(aq
 .el .ds Aq '
-.TH trk 1  "trk 0.4.1" 
+.TH trk 1  "trk 0.5.0" 
 .SH NAME
 trk \- adhd compliant task tracking
 .SH SYNOPSIS
@@ -61,6 +61,9 @@ Switch tasks using the picker
 trk\-list(1)
 Show the current task, its siblings, and its parents
 .TP
+trk\-view(1)
+Browse the whole task list, assigning dates to tasks
+.TP
 trk\-undo(1)
 Undo the last N changes
 .TP
@@ -72,6 +75,9 @@ Show the whole goal as a tree with progress
 .TP
 trk\-delete(1)
 Delete a goal and every task under it
+.TP
+trk\-agenda(1)
+Tasks by the date they are assigned, org\-agenda style
 .TP
 trk\-jot(1)
 Capture a task in the inbox
@@ -85,4 +91,4 @@ What got finished, by day
 trk\-completions(1)
 Install shell completions for the detected shell
 .SH VERSION
-v0.4.1
+v0.5.0

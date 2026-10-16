@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-15
+
 ### Changed
 
 - **Breaking:** reworked the command set around three ways to add tasks. `trk
@@ -28,6 +30,17 @@ and this project adheres to
 
 ### Added
 
+- `trk view` opens the whole task list in the picker; pressing `a` assigns a
+  date (no time) to the highlighted task and reopens the picker, and `-` clears
+  it.
+- `trk agenda` prints unfinished tasks grouped by their assigned date,
+  org-agenda style, emphasising tasks assigned to today in a configurable color
+  (`agenda_color`, yellow by default).
+- `examples/kitchen-sink.trk`, a canonical specimen of the file format: every
+  combination of task state and optional attribute (note, `at` date or datetime,
+  `spent`, `running`) appears exactly once, nested to cover depth, alongside
+  every goal shape and the inbox. A round-trip test doubles as a format
+  contract.
 - `scripts/install-local.sh` builds the release and installs the binary and man
   page for the current user (`~/.local/bin` and `~/.local/share/man`), without
   `sudo`, then refreshes the `whatis` index.
@@ -57,7 +70,7 @@ and this project adheres to
   `prompt` command. First-run setup still creates the config file.
 - **Breaking:** the `--why`/`--no-why`, `-s`/`--switch`, `-c`/`--current`, and
   `-n`/`--stay` flags; `-n` is now `then --next`.
-- The `prompt_why` and `poll_ms` config keys.
+- The `poll_ms` config key.
 
 ### Fixed
 
@@ -181,7 +194,8 @@ and this project adheres to
   agenda, the log, pickers, the `trk start` TUI, undo, shell completions, and
   the man page.
 
-[Unreleased]: https://github.com/darkfoam/trk/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/darkfoam/trk/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/darkfoam/trk/compare/v0.3.1...v0.5.0
 [0.3.1]: https://github.com/darkfoam/trk/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/darkfoam/trk/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/darkfoam/trk/compare/v0.2.0...v0.2.1

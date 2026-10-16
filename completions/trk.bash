@@ -19,6 +19,9 @@ _trk() {
             trk,add)
                 cmd="trk__subcmd__add"
                 ;;
+            trk,agenda)
+                cmd="trk__subcmd__agenda"
+                ;;
             trk,and)
                 cmd="trk__subcmd__and"
                 ;;
@@ -70,6 +73,9 @@ _trk() {
             trk,undo)
                 cmd="trk__subcmd__undo"
                 ;;
+            trk,view)
+                cmd="trk__subcmd__view"
+                ;;
             trk__subcmd__delete,goal)
                 cmd="trk__subcmd__delete__subcmd__goal"
                 ;;
@@ -92,7 +98,7 @@ _trk() {
 
     case "${cmd}" in
         trk)
-            opts="-h -V --color --help --version add then and before done time stop drop switch list undo new progress delete jot inbox log completions"
+            opts="-h -V --color --help --version add then and before done time stop drop switch list view undo new progress delete agenda jot inbox log completions"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -124,6 +130,24 @@ _trk() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        trk__subcmd__agenda)
+            opts="-h --color --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
                 --color)
                     COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
@@ -538,6 +562,24 @@ _trk() {
             return 0
             ;;
         trk__subcmd__undo)
+            opts="-h --color --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        trk__subcmd__view)
             opts="-h --color --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )

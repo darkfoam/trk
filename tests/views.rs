@@ -87,6 +87,29 @@ fn unicode_symbols_used_by_default() {
 }
 
 #[test]
+fn agenda_groups_by_date() {
+    let text = "\
+trk 1
+next g=1 t=3 i=1
+active g1
+
+goal g1 open 2026-10-06T09:00:00-05:00 G
+  [ ] t1 2026-10-07T09:00:00-05:00 due today
+    @ at=2026-10-07
+  [ ] t2 2026-10-07T09:00:00-05:00 due later
+    @ at=2026-10-09
+";
+    let doc = parse(text).unwrap();
+    let today = chrono::NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
+    let got = render(views::agenda_view(&doc, today, 80, Style::new(false, true)));
+    assert!(got.contains("Today"), "{got}");
+    assert!(got.contains("2026-10-07"), "{got}");
+    assert!(got.contains("due today"), "{got}");
+    assert!(got.contains("2026-10-09"), "{got}");
+    assert!(got.contains("due later"), "{got}");
+}
+
+#[test]
 fn long_text_wraps_within_width() {
     let long = "x".repeat(300);
     let text = format!(

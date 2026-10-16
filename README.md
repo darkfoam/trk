@@ -84,6 +84,8 @@ trk and "Call internet company" # a sibling of what you just added
 trk list                        # where am I, and what surrounds me?
 trk time                        # start timing the current task
 trk done                        # finish it (and stop the timer)
+trk view                        # browse everything, press `a` to date a task
+trk agenda                      # what's coming up, today highlighted
 trk progress goal               # the whole goal as a tree
 ```
 
@@ -120,6 +122,11 @@ has open sub-tasks: `trk done` refuses and exits 3 until you pass `--force`.
 `trk time` records time against the current task; `trk stop` (or `trk done`)
 stops the timer, and totals show up in `trk progress goal` and `trk log`.
 
+`trk view` opens the whole task list in the picker; press `a` on a task to
+assign it a date (no time) and the picker reopens. `trk agenda` then prints
+those tasks grouped by day, org-agenda style, emphasising anything assigned to
+today in a configurable color (yellow by default via `agenda_color`).
+
 For the complete walkthrough, see the man page (`man trk`) or
 `trk <command> --help`.
 
@@ -133,6 +140,7 @@ For the complete walkthrough, see the man page (`man trk`) or
 | `trk and <text>` | new sibling after the most recently added task |
 | `trk before <text>` | new sibling before the most recently added task |
 | `trk list` | current task, siblings, and up to three parents |
+| `trk view` | browse the whole list in the picker; `a` assigns a date |
 | `trk switch` | choose the current task with the picker |
 | `trk done [-f]` | complete the current task; stop its timer |
 | `trk time` | start timing the current task |
@@ -147,6 +155,7 @@ For the complete walkthrough, see the man page (`man trk`) or
 | `trk jot <text>` | capture a task in the inbox |
 | `trk inbox` | file inbox items with the picker (TAB creates a goal) |
 | `trk log [when]` | what got finished, by day, with time spent |
+| `trk agenda` | dated tasks by day, today highlighted |
 | `trk completions [shell]` | install shell completions for your shell |
 
 Aliases: `d` done, `l` list, `u` undo, `i` jot.
@@ -169,6 +178,7 @@ undo_depth = 50          # number of undo snapshots kept
 prompt_why = true        # ask "why?" when adding a task
 ascii = "auto"           # auto | always | never
 current_color = "green"  # color of the current task
+agenda_color = "yellow"  # color of tasks assigned today in the agenda
 ```
 
 Environment variables:
@@ -204,5 +214,12 @@ cargo run -p xtask -- completions   # regenerate completions/
 `man/trk.1` is the hand-written usage book (see `man trk`); `xtask man` writes a
 generated flag skeleton to `man/trk.1.generated` so the two can be diffed for
 drift.
+
+`examples/kitchen-sink.trk` is a canonical specimen of the file format: every
+combination of task state (open, done, dropped, stopped) and optional attribute
+(note, `at` date or datetime, `spent`, `running`) appears exactly once, nested
+where possible to cover depth, alongside every goal shape (current/last present
+or absent, empty, done, active) and the inbox. A test asserts it round-trips
+(`serialize(parse(x)) == x`), so it doubles as a format contract.
 
 CI runs the gates above on Linux, macOS, and Windows.

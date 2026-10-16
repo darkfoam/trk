@@ -14,6 +14,8 @@ pub enum Role {
     Task,
     /// A completed or dropped task: dim and struck through.
     Done,
+    /// A task assigned to today: emphasised in the agenda color.
+    Today,
     Warning,
     Error,
 }
@@ -177,23 +179,26 @@ pub struct Style {
     pub color: bool,
     pub ascii: bool,
     pub current: ColorName,
+    pub agenda: ColorName,
 }
 
 impl Style {
-    /// Default current-task color is green.
+    /// Default current-task color is green and the agenda is yellow.
     pub fn new(color: bool, ascii: bool) -> Self {
         Self {
             color,
             ascii,
             current: ColorName::Green,
+            agenda: ColorName::Yellow,
         }
     }
 
-    pub fn with_current(color: bool, ascii: bool, current: ColorName) -> Self {
+    pub fn with_colors(color: bool, ascii: bool, current: ColorName, agenda: ColorName) -> Self {
         Self {
             color,
             ascii,
             current,
+            agenda,
         }
     }
 
@@ -229,6 +234,9 @@ fn ansi_for(role: Role, style: Style) -> AnsiStyle {
             .dimmed()
             .fg_color(Some(AnsiColor::Green.into())),
         Role::Done => AnsiStyle::new().dimmed().strikethrough(),
+        Role::Today => AnsiStyle::new()
+            .bold()
+            .fg_color(Some(style.agenda.to_ansi().into())),
         Role::Warning => AnsiStyle::new().fg_color(Some(Ansi256Color(208).into())),
         Role::Error => AnsiStyle::new().fg_color(Some(AnsiColor::Red.into())),
     }

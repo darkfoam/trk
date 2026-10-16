@@ -49,6 +49,8 @@ pub struct Config {
     pub prompt_why: bool,
     pub ascii: Toggle,
     pub current_color: ColorName,
+    /// Color for tasks assigned today in the agenda (default yellow).
+    pub agenda_color: ColorName,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -216,6 +218,25 @@ impl Config {
             None => ColorName::default(),
         };
 
+        let agenda_color = match table.get("agenda_color") {
+            Some(toml::Value::String(s)) => {
+                ColorName::parse(s).ok_or_else(|| ConfigError::Invalid {
+                    path: path.to_path_buf(),
+                    message: format!(
+                        "agenda_color: expected one of {}, got \"{s}\"",
+                        ColorName::NAMES.join(", ")
+                    ),
+                })?
+            }
+            Some(_) => {
+                return Err(ConfigError::Invalid {
+                    path: path.to_path_buf(),
+                    message: "agenda_color: expected a string".into(),
+                });
+            }
+            None => ColorName::Yellow,
+        };
+
         let wrap = match table.get("wrap") {
             Some(toml::Value::Integer(n)) => (*n).clamp(40, 200) as usize,
             Some(_) => {
@@ -261,6 +282,7 @@ impl Config {
             prompt_why,
             ascii,
             current_color,
+            agenda_color,
         };
         Ok((config, warnings))
     }
@@ -282,6 +304,7 @@ impl Config {
             prompt_why: true,
             ascii: Toggle::Auto,
             current_color: ColorName::default(),
+            agenda_color: ColorName::Yellow,
         })
     }
 
@@ -308,7 +331,8 @@ impl Config {
              undo_depth = {undo}\n\
              prompt_why = {why}\n\
              ascii = \"{ascii}\"\n\
-             current_color = \"{current_color}\"\n",
+             current_color = \"{current_color}\"\n\
+             agenda_color = \"{agenda_color}\"\n",
             store = self.store_raw,
             backups = self.backups_raw,
             color = self.color.as_str(),
@@ -317,6 +341,7 @@ impl Config {
             why = self.prompt_why,
             ascii = self.ascii.as_str(),
             current_color = self.current_color.as_str(),
+            agenda_color = self.agenda_color.as_str(),
         )
     }
 }
@@ -330,6 +355,7 @@ const KNOWN_KEYS: &[&str] = &[
     "prompt_why",
     "ascii",
     "current_color",
+    "agenda_color",
     // Accepted from older versions, no longer used.
     "poll_ms",
 ];

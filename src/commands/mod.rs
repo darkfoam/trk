@@ -10,7 +10,7 @@ use crate::ctx::Ctx;
 use crate::error::TrkError;
 use crate::interact::{NullUi, PickResult, PickRow, PickSpec, TerminalUi, Ui};
 use crate::model::ops::{self, Message, MsgKind, Outcome, Request, Target, ViewHint};
-use crate::model::{Doc, Goal};
+use crate::model::{Doc, Goal, Schedule};
 use crate::store::Store;
 use crate::store::undo::UndoRing;
 use crate::ui::{style, views};
@@ -166,6 +166,7 @@ fn run_config_flow() -> Result<Config, TrkError> {
         prompt_why: true,
         ascii: Toggle::Auto,
         current_color: crate::ui::style::ColorName::default(),
+        agenda_color: crate::ui::style::ColorName::Yellow,
     };
 
     if !config.store.exists() {
@@ -395,6 +396,7 @@ fn run(ctx: &Ctx, ui: &mut dyn Ui, command: Command) -> Result<i32, TrkError> {
                 Ok(0)
             }
         },
+        Command::View => view_command(ctx, ui),
         Command::Undo(args) => undo_command(ctx, args),
         Command::New(args) => match args.what {
             NewWhat::Goal(a) => new_goal(ctx, ui, a),
@@ -411,6 +413,7 @@ fn run(ctx: &Ctx, ui: &mut dyn Ui, command: Command) -> Result<i32, TrkError> {
         Command::Delete(args) => match args.what {
             DeleteWhat::Goal(a) => delete_goal(ctx, ui, a),
         },
+        Command::Agenda => agenda_command(ctx),
         Command::Jot(args) => {
             let text = require_text("jot", &args.text)?;
             mutate(ctx, "jot", &Request::Jot { text })
@@ -442,7 +445,9 @@ fn switch_task(ctx: &Ctx, ui: &mut dyn Ui) -> Result<i32, TrkError> {
             },
         ),
         PickResult::Cancel => Err(TrkError::Cancelled),
-        PickResult::Create => unreachable!("switch does not allow new items"),
+        PickResult::Create | PickResult::AssignDate(_) => {
+            unreachable!("switch does not allow new items")
+        }
     }
 }
 
@@ -458,7 +463,9 @@ fn switch_goal(ctx: &Ctx, ui: &mut dyn Ui) -> Result<i32, TrkError> {
     match ui.pick(&spec)? {
         PickResult::Chosen(id) => mutate(ctx, "switch goal", &Request::GoalSwitch { id }),
         PickResult::Cancel => Err(TrkError::Cancelled),
-        PickResult::Create => unreachable!("switch does not allow new items"),
+        PickResult::Create | PickResult::AssignDate(_) => {
+            unreachable!("switch does not allow new items")
+        }
     }
 }
 
@@ -477,7 +484,9 @@ fn drop_command(ctx: &Ctx, ui: &mut dyn Ui, args: DropArgs) -> Result<i32, TrkEr
     let id = match ui.pick(&spec)? {
         PickResult::Chosen(id) => id,
         PickResult::Cancel => return Err(TrkError::Cancelled),
-        PickResult::Create => unreachable!("drop does not allow new items"),
+        PickResult::Create | PickResult::AssignDate(_) => {
+            unreachable!("drop does not allow new items")
+        }
     };
 
     let children = goal.find(id).map(|t| t.children.len()).unwrap_or(0);
@@ -511,6 +520,121 @@ fn confirm(ui: &mut dyn Ui, prompt: &str) -> Result<bool, TrkError> {
     })
 }
 
+/// `trk view`: browse the whole task list, assigning dates with `a`.
+fn view_command(ctx: &Ctx, ui: &mut dyn Ui) -> Result<i32, TrkError> {
+    loop {
+        let store = active_store(ctx);
+        let doc = store.read()?;
+        let goal = doc
+            .active_goal()
+            .ok_or(TrkError::Op(ops::OpError::NoActiveGoal))?;
+
+        let mut rows = Vec::new();
+        let mut n = 0;
+        for (task, depth) in goal.walk() {
+            n += 1;
+            let mut label = format!("{:>2}  {}{}", n, "  ".repeat(depth), task.text);
+            if let Some(at) = &task.at {
+                let when = match at {
+                    Schedule::Date(d) => d.format("%Y-%m-%d").to_string(),
+                    Schedule::DateTime(ts) => ts.format("%Y-%m-%d %H:%M").to_string(),
+                };
+                label.push_str(&format!("  ({when})"));
+            }
+            rows.push(PickRow {
+                id: task.id,
+                label,
+                number: Some(n),
+                current: goal.cursor == Some(task.id),
+            });
+        }
+        if rows.is_empty() {
+            return Err(TrkError::Nothing("no tasks to view".into()));
+        }
+
+        let initial = interactive_initial(&rows);
+        let mut spec = PickSpec::new("view", rows, initial);
+        spec.assign_date = true;
+        match ui.pick(&spec)? {
+            PickResult::AssignDate(id) => {
+                let today = ctx.clock.now().date_naive();
+                let prompt = "date (today, tomorrow, +Nd, mon..sun, YYYY-MM-DD; - to clear): ";
+                let Some(input) = ui.ask(prompt)? else {
+                    continue;
+                };
+                let trimmed = input.trim();
+                let date = if matches!(trimmed, "-" | "none" | "clear") {
+                    None
+                } else {
+                    Some(parse_when_date(trimmed, today)?)
+                };
+                mutate(
+                    ctx,
+                    "view date",
+                    &Request::SetDate {
+                        target: Target::Task(id),
+                        date,
+                    },
+                )?;
+                continue;
+            }
+            // A view is not a mutation: picking or dismissing just closes it.
+            PickResult::Chosen(_) | PickResult::Cancel => return Ok(0),
+            PickResult::Create => unreachable!("view does not allow new items"),
+        }
+    }
+}
+
+/// Parse a date for `trk view`: today, tomorrow, `+Nd`, a weekday, or
+/// `YYYY-MM-DD`. No time component.
+fn parse_when_date(spec: &str, today: NaiveDate) -> Result<NaiveDate, TrkError> {
+    use chrono::Datelike;
+    let token = spec.trim().to_ascii_lowercase();
+    if token == "today" {
+        return Ok(today);
+    }
+    if token == "tomorrow" {
+        return Ok(today + chrono::Duration::days(1));
+    }
+    if let Some(rest) = token.strip_prefix('+') {
+        let days = rest.strip_suffix('d').unwrap_or(rest);
+        if let Ok(n) = days.parse::<i64>() {
+            return Ok(today + chrono::Duration::days(n));
+        }
+    }
+    const WEEKDAYS: [(&str, i64); 7] = [
+        ("mon", 0),
+        ("tue", 1),
+        ("wed", 2),
+        ("thu", 3),
+        ("fri", 4),
+        ("sat", 5),
+        ("sun", 6),
+    ];
+    if let Some(head) = token.get(..3) {
+        for (name, dow) in WEEKDAYS {
+            if head == name {
+                let current = today.weekday().num_days_from_monday() as i64;
+                let mut delta = (dow + 7 - current) % 7;
+                if delta == 0 {
+                    delta = 7;
+                }
+                return Ok(today + chrono::Duration::days(delta));
+            }
+        }
+    }
+    NaiveDate::parse_from_str(&token, "%Y-%m-%d")
+        .map_err(|_| TrkError::Usage("date: today, tomorrow, +Nd, mon..sun, or YYYY-MM-DD".into()))
+}
+
+fn agenda_command(ctx: &Ctx) -> Result<i32, TrkError> {
+    let store = active_store(ctx);
+    let doc = store.read()?;
+    let today = ctx.clock.now().date_naive();
+    print_lines(ctx, &views::agenda_view(&doc, today, ctx.wrap, ctx.style()));
+    Ok(0)
+}
+
 fn new_goal(ctx: &Ctx, ui: &mut dyn Ui, args: NewGoalArgs) -> Result<i32, TrkError> {
     let mut title = join_text(&args.title);
     if title.trim().is_empty() {
@@ -537,7 +661,9 @@ fn delete_goal(ctx: &Ctx, ui: &mut dyn Ui, args: DeleteGoalArgs) -> Result<i32, 
     let id = match ui.pick(&spec)? {
         PickResult::Chosen(id) => id,
         PickResult::Cancel => return Err(TrkError::Cancelled),
-        PickResult::Create => unreachable!("delete does not allow new items"),
+        PickResult::Create | PickResult::AssignDate(_) => {
+            unreachable!("delete does not allow new items")
+        }
     };
     if !args.yes {
         if !ctx.interactive() {
@@ -575,7 +701,9 @@ fn inbox_command(ctx: &Ctx, ui: &mut dyn Ui) -> Result<i32, TrkError> {
     let item_id = match ui.pick(&spec)? {
         PickResult::Chosen(id) => id,
         PickResult::Cancel => return Err(TrkError::Cancelled),
-        PickResult::Create => unreachable!("inbox items do not allow new items"),
+        PickResult::Create | PickResult::AssignDate(_) => {
+            unreachable!("inbox items do not allow new items")
+        }
     };
 
     // 2. Which goal? (TAB creates a new one.)
@@ -594,6 +722,7 @@ fn inbox_command(ctx: &Ctx, ui: &mut dyn Ui) -> Result<i32, TrkError> {
             }
             new_goal = Some(title);
         }
+        PickResult::AssignDate(_) => unreachable!("inbox does not assign dates"),
         PickResult::Cancel => return Err(TrkError::Cancelled),
     }
 
@@ -622,7 +751,7 @@ fn inbox_command(ctx: &Ctx, ui: &mut dyn Ui) -> Result<i32, TrkError> {
             PickResult::Chosen(0) => parent = None,
             PickResult::Chosen(id) => parent = Some(id),
             PickResult::Cancel => return Err(TrkError::Cancelled),
-            PickResult::Create => {}
+            PickResult::Create | PickResult::AssignDate(_) => {}
         }
     }
 

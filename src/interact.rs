@@ -18,6 +18,9 @@ pub struct PickSpec {
     pub initial: usize,
     /// Support TAB to create a new item (returns `PickResult::Create`).
     pub allow_new: bool,
+    /// Support `a` to assign a date to the highlighted item (returns
+    /// `PickResult::AssignDate`).
+    pub assign_date: bool,
 }
 
 impl PickSpec {
@@ -27,6 +30,7 @@ impl PickSpec {
             rows,
             initial,
             allow_new: false,
+            assign_date: false,
         }
     }
 }
@@ -35,6 +39,7 @@ impl PickSpec {
 pub enum PickResult {
     Chosen(u64),
     Create,
+    AssignDate(u64),
     Cancel,
 }
 
@@ -103,8 +108,24 @@ impl Ui for TerminalUi {
 pub struct NullUi;
 
 impl Ui for NullUi {
-    fn ask(&mut self, _prompt: &str) -> Result<Option<String>, TrkError> {
-        Ok(None)
+    fn ask(&mut self, prompt: &str) -> Result<Option<String>, TrkError> {
+        // Non-interactive, but still scriptable: read a line from stdin so
+        // flows like `trk view`'s date prompt and `trk inbox`'s new-goal title
+        // can be driven from a pipeline.
+        let mut stderr = std::io::stderr();
+        write!(stderr, "{prompt}")?;
+        stderr.flush()?;
+        let mut line = String::new();
+        let n = std::io::stdin().lock().read_line(&mut line)?;
+        if n == 0 {
+            return Ok(None);
+        }
+        let trimmed = line.trim_end_matches(['\n', '\r']);
+        if trimmed.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(trimmed.to_string()))
+        }
     }
 
     fn pick(&mut self, spec: &PickSpec) -> Result<PickResult, TrkError> {
@@ -118,6 +139,9 @@ impl Ui for NullUi {
         }
         if spec.allow_new {
             writeln!(err, "n: new goal")?;
+        }
+        if spec.assign_date {
+            writeln!(err, "a <n>: assign a date")?;
         }
         write!(err, "pick: ")?;
         err.flush()?;
@@ -136,6 +160,20 @@ impl Ui for NullUi {
         }
         if spec.allow_new && trimmed.eq_ignore_ascii_case("n") {
             return Ok(PickResult::Create);
+        }
+        if spec.assign_date
+            && let Some(rest) = trimmed.strip_prefix("a ")
+        {
+            let number: usize = rest
+                .trim()
+                .parse()
+                .map_err(|_| TrkError::Usage("pick: assign wants `a <number>`".into()))?;
+            return spec
+                .rows
+                .iter()
+                .find(|r| r.number == Some(number))
+                .map(|r| PickResult::AssignDate(r.id))
+                .ok_or_else(|| TrkError::Usage(format!("pick: no item number {number}")));
         }
         let number: usize = trimmed
             .parse()

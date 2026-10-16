@@ -39,10 +39,12 @@ complete -c trk -n "__fish_trk_needs_command" -f -a "stop" -d 'Stop timing the c
 complete -c trk -n "__fish_trk_needs_command" -f -a "drop" -d 'Delete a task, using the picker'
 complete -c trk -n "__fish_trk_needs_command" -f -a "switch" -d 'Switch tasks using the picker'
 complete -c trk -n "__fish_trk_needs_command" -f -a "list" -d 'Show the current task, its siblings, and its parents'
+complete -c trk -n "__fish_trk_needs_command" -f -a "view" -d 'Browse the whole task list, assigning dates to tasks'
 complete -c trk -n "__fish_trk_needs_command" -f -a "undo" -d 'Undo the last N changes'
 complete -c trk -n "__fish_trk_needs_command" -f -a "new" -d 'Create a goal'
 complete -c trk -n "__fish_trk_needs_command" -f -a "progress" -d 'Show the whole goal as a tree with progress'
 complete -c trk -n "__fish_trk_needs_command" -f -a "delete" -d 'Delete a goal and every task under it'
+complete -c trk -n "__fish_trk_needs_command" -f -a "agenda" -d 'Tasks by the date they are assigned, org-agenda style'
 complete -c trk -n "__fish_trk_needs_command" -f -a "jot" -d 'Capture a task in the inbox'
 complete -c trk -n "__fish_trk_needs_command" -f -a "inbox" -d 'Open the inbox in the picker'
 complete -c trk -n "__fish_trk_needs_command" -f -a "log" -d 'What got finished, by day'
@@ -108,6 +110,10 @@ complete -c trk -n "__fish_trk_using_subcommand list; and __fish_seen_subcommand
 always\t''
 never\t''"
 complete -c trk -n "__fish_trk_using_subcommand list; and __fish_seen_subcommand_from goal" -s h -l help -d 'Print help'
+complete -c trk -n "__fish_trk_using_subcommand view" -l color -d 'When to colorize output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c trk -n "__fish_trk_using_subcommand view" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand undo" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -140,6 +146,10 @@ always\t''
 never\t''"
 complete -c trk -n "__fish_trk_using_subcommand delete; and __fish_seen_subcommand_from goal" -s y -l yes -d 'Skip the confirmation prompt'
 complete -c trk -n "__fish_trk_using_subcommand delete; and __fish_seen_subcommand_from goal" -s h -l help -d 'Print help'
+complete -c trk -n "__fish_trk_using_subcommand agenda" -l color -d 'When to colorize output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c trk -n "__fish_trk_using_subcommand agenda" -s h -l help -d 'Print help'
 complete -c trk -n "__fish_trk_using_subcommand jot" -l color -d 'When to colorize output' -r -f -a "auto\t''
 always\t''
 never\t''"

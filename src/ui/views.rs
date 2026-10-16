@@ -1,10 +1,10 @@
-use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDate};
+use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDate, NaiveTime};
 
 use super::style::{Role, Style, StyledLine};
 use super::wrap;
 use crate::model::ops::format_duration;
 use crate::model::tree;
-use crate::model::{Doc, GoalStatus, Task, TaskId, TaskState};
+use crate::model::{Doc, GoalStatus, Schedule, Task, TaskId, TaskState};
 
 fn indent(depth: usize) -> String {
     "  ".repeat(depth)
@@ -323,4 +323,99 @@ fn weekday_abbrev(day: chrono::Weekday) -> &'static str {
 
 pub fn days_back(today: NaiveDate, n: usize) -> Vec<NaiveDate> {
     (0..n).map(|i| today - Duration::days(i as i64)).collect()
+}
+
+/// `trk agenda`: tasks grouped by the date they are assigned, org-agenda
+/// style. Tasks assigned to today are emphasised in the agenda color.
+pub fn agenda_view(doc: &Doc, today: NaiveDate, width: usize, style: Style) -> Vec<StyledLine> {
+    let _ = style;
+    struct Entry {
+        date: NaiveDate,
+        time: Option<NaiveTime>,
+        text: String,
+        goal: String,
+    }
+
+    let mut entries = Vec::new();
+    for goal in &doc.goals {
+        for (task, _) in goal.walk() {
+            if !task.state.is_unfinished() {
+                continue;
+            }
+            let Some(at) = &task.at else { continue };
+            let (date, time) = match at {
+                Schedule::Date(d) => (*d, None),
+                Schedule::DateTime(ts) => (ts.date_naive(), Some(ts.time())),
+            };
+            entries.push(Entry {
+                date,
+                time,
+                text: task.text.clone(),
+                goal: goal.title.clone(),
+            });
+        }
+    }
+    if entries.is_empty() {
+        return vec![plain("nothing scheduled")];
+    }
+    entries.sort_by_key(|e| (e.date, e.time));
+
+    let mut out = Vec::new();
+    let overdue: Vec<&Entry> = entries.iter().filter(|e| e.date < today).collect();
+    if !overdue.is_empty() {
+        out.push(styled("Overdue", Role::Title));
+        for e in overdue {
+            push_agenda_line(&mut out, e.time, &e.text, &e.goal, width, Role::Normal);
+        }
+    }
+
+    let mut dates: Vec<NaiveDate> = entries
+        .iter()
+        .map(|e| e.date)
+        .filter(|d| *d >= today)
+        .collect();
+    dates.sort_unstable();
+    dates.dedup();
+    for date in dates {
+        let is_today = date == today;
+        if is_today {
+            out.push(styled(
+                format!("Today  {}", date.format("%a %Y-%m-%d")),
+                Role::Today,
+            ));
+        } else {
+            out.push(styled(date.format("%a %Y-%m-%d").to_string(), Role::Title));
+        }
+        let role = if is_today { Role::Today } else { Role::Normal };
+        for e in entries.iter().filter(|e| e.date == date) {
+            push_agenda_line(&mut out, e.time, &e.text, &e.goal, width, role);
+        }
+    }
+    out
+}
+
+fn push_agenda_line(
+    out: &mut Vec<StyledLine>,
+    time: Option<NaiveTime>,
+    text: &str,
+    goal: &str,
+    width: usize,
+    role: Role,
+) {
+    let left = match time {
+        Some(t) => format!("  {}  {text}", t.format("%H:%M")),
+        None => format!("  {text}"),
+    };
+    let right = format!("[{goal}]");
+    let left_w = wrap::width_of(&left);
+    let right_w = wrap::width_of(&right);
+    if left_w + 1 + right_w <= width {
+        out.push(styled(
+            format!("{left}{}{right}", " ".repeat(width - right_w - left_w)),
+            role,
+        ));
+    } else {
+        out.push(styled(left, role));
+        out.push(styled(format!("    {right}"), Role::Dim));
+    }
 }

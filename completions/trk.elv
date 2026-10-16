@@ -33,10 +33,12 @@ set edit:completion:arg-completer[trk] = {|@words|
             cand drop 'Delete a task, using the picker'
             cand switch 'Switch tasks using the picker'
             cand list 'Show the current task, its siblings, and its parents'
+            cand view 'Browse the whole task list, assigning dates to tasks'
             cand undo 'Undo the last N changes'
             cand new 'Create a goal'
             cand progress 'Show the whole goal as a tree with progress'
             cand delete 'Delete a goal and every task under it'
+            cand agenda 'Tasks by the date they are assigned, org-agenda style'
             cand jot 'Capture a task in the inbox'
             cand inbox 'Open the inbox in the picker'
             cand log 'What got finished, by day'
@@ -122,6 +124,11 @@ set edit:completion:arg-completer[trk] = {|@words|
             cand -h 'Print help'
             cand --help 'Print help'
         }
+        &'trk;view'= {
+            cand --color 'When to colorize output'
+            cand -h 'Print help'
+            cand --help 'Print help'
+        }
         &'trk;undo'= {
             cand --color 'When to colorize output'
             cand -h 'Print help'
@@ -159,6 +166,11 @@ set edit:completion:arg-completer[trk] = {|@words|
             cand --color 'When to colorize output'
             cand -y 'Skip the confirmation prompt'
             cand --yes 'Skip the confirmation prompt'
+            cand -h 'Print help'
+            cand --help 'Print help'
+        }
+        &'trk;agenda'= {
+            cand --color 'When to colorize output'
             cand -h 'Print help'
             cand --help 'Print help'
         }

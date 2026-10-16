@@ -83,6 +83,8 @@ pub enum Command {
     /// Show the current task, its siblings, and its parents.
     #[command(alias = "l")]
     List(ListArgs),
+    /// Browse the whole task list, assigning dates to tasks.
+    View,
     /// Undo the last N changes.
     #[command(alias = "u")]
     Undo(UndoArgs),
@@ -92,6 +94,8 @@ pub enum Command {
     Progress(ProgressArgs),
     /// Delete a goal and every task under it.
     Delete(DeleteArgs),
+    /// Tasks by the date they are assigned, org-agenda style.
+    Agenda,
     /// Capture a task in the inbox.
     #[command(alias = "i")]
     Jot(JotArgs),

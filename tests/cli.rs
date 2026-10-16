@@ -148,6 +148,72 @@ fn drop_with_yes_deletes_the_subtree() {
 }
 
 #[test]
+fn view_assigns_a_date_to_a_task() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "dated task"]).success();
+    // `a 1` assigns to row 1; then the date; then an empty line closes the view.
+    env.cmd()
+        .write_stdin("a 1\n2026-10-09\n\n")
+        .args(["view"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("dated task"));
+    let task = env.doc().active_goal().unwrap().find(1).cloned().unwrap();
+    assert_eq!(
+        task.at,
+        Some(trk::model::Schedule::Date(
+            chrono::NaiveDate::from_ymd_opt(2026, 10, 9).unwrap()
+        ))
+    );
+}
+
+#[test]
+fn agenda_lists_dated_tasks_and_colors_today() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "due today"]).success();
+    env.cmd()
+        .write_stdin("a 1\ntoday\n\n")
+        .args(["view"])
+        .assert()
+        .success();
+
+    env.run(&["agenda"])
+        .success()
+        .stdout(predicate::str::contains("Today"))
+        .stdout(predicate::str::contains("due today"));
+
+    // Forced color: today's entry is emphasized (yellow by default).
+    let out = env
+        .cmd()
+        .args(["--color", "always", "agenda"])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("\u{1b}["), "colored output: {stdout:?}");
+    assert!(stdout.contains("33"), "yellow highlight: {stdout:?}");
+}
+
+#[test]
+fn view_shows_assigned_dates_in_labels() {
+    let env = Env::new();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "dated task"]).success();
+    env.cmd()
+        .write_stdin("a 1\n2026-10-09\n\n")
+        .args(["view"])
+        .assert()
+        .success();
+    env.cmd()
+        .write_stdin("\n")
+        .args(["view"])
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("2026-10-09"));
+}
+
+#[test]
 fn done_completes_the_current_task() {
     let env = Env::new();
     env.run(&["new", "goal", "G"]).success();

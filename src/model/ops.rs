@@ -1,7 +1,7 @@
-use chrono::{DateTime, FixedOffset};
+use chrono::{DateTime, FixedOffset, NaiveDate};
 
 use super::tree;
-use super::{Doc, Goal, Task, TaskId, TaskState};
+use super::{Doc, Goal, Schedule, Task, TaskId, TaskState};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Target {
@@ -47,6 +47,11 @@ pub enum Request {
     /// Permanently delete a task and its subtree.
     Drop {
         target: Target,
+    },
+    /// Assign (or clear) a date on a task, for the agenda.
+    SetDate {
+        target: Target,
+        date: Option<NaiveDate>,
     },
     GoalNew {
         title: String,
@@ -171,6 +176,7 @@ pub fn apply(
         Request::Stop => op_stop(&mut doc, now)?,
         Request::Switch { target } => op_switch(&mut doc, target)?,
         Request::Drop { target } => op_drop(&mut doc, target)?,
+        Request::SetDate { target, date } => op_set_date(&mut doc, target, *date)?,
         Request::GoalNew { title } => op_goal_new(&mut doc, title, now)?,
         Request::GoalSwitch { id } => op_goal_switch(&mut doc, *id)?,
         Request::GoalDelete { id } => op_goal_delete(&mut doc, *id)?,
@@ -592,6 +598,34 @@ fn op_drop(doc: &mut Doc, target: &Target) -> Result<Outcome, OpError> {
     Ok(Outcome {
         messages: vec![Message::normal(format!("deleted: {text}"))],
         hint: Some(ViewHint::Status),
+        changed: true,
+    })
+}
+
+fn op_set_date(
+    doc: &mut Doc,
+    target: &Target,
+    date: Option<NaiveDate>,
+) -> Result<Outcome, OpError> {
+    let goal_id = doc.active.ok_or(OpError::NoActiveGoal)?;
+    let id = match target {
+        Target::Current => {
+            let goal = doc.goal(goal_id).expect("active goal exists");
+            goal.cursor.ok_or(OpError::NoCurrentTask)?
+        }
+        Target::Task(id) => *id,
+    };
+    let goal = doc.goal_mut(goal_id).expect("active goal exists");
+    let task = goal.find_mut(id).ok_or(OpError::TargetNotFound(id))?;
+    task.at = date.map(Schedule::Date);
+    let text = task.text.clone();
+    let message = match date {
+        Some(d) => format!("dated {text}: {}", d.format("%Y-%m-%d")),
+        None => format!("cleared the date on {text}"),
+    };
+    Ok(Outcome {
+        messages: vec![Message::normal(message)],
+        hint: Some(ViewHint::None),
         changed: true,
     })
 }

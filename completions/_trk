@@ -159,6 +159,13 @@ _arguments "${_arguments_options[@]}" : \
     ;;
 esac
 ;;
+(view)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
 (undo)
 _arguments "${_arguments_options[@]}" : \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
@@ -248,6 +255,13 @@ _arguments "${_arguments_options[@]}" : \
     ;;
 esac
 ;;
+(agenda)
+_arguments "${_arguments_options[@]}" : \
+'--color=[When to colorize output]:COLOR:(auto always never)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
 (jot)
 _arguments "${_arguments_options[@]}" : \
 '--color=[When to colorize output]:COLOR:(auto always never)' \
@@ -297,10 +311,12 @@ _trk_commands() {
 'drop:Delete a task, using the picker' \
 'switch:Switch tasks using the picker' \
 'list:Show the current task, its siblings, and its parents' \
+'view:Browse the whole task list, assigning dates to tasks' \
 'undo:Undo the last N changes' \
 'new:Create a goal' \
 'progress:Show the whole goal as a tree with progress' \
 'delete:Delete a goal and every task under it' \
+'agenda:Tasks by the date they are assigned, org-agenda style' \
 'jot:Capture a task in the inbox' \
 'inbox:Open the inbox in the picker' \
 'log:What got finished, by day' \
@@ -312,6 +328,11 @@ _trk_commands() {
 _trk__subcmd__add_commands() {
     local commands; commands=()
     _describe -t commands 'trk add commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__agenda_commands] )) ||
+_trk__subcmd__agenda_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk agenda commands' commands "$@"
 }
 (( $+functions[_trk__subcmd__and_commands] )) ||
 _trk__subcmd__and_commands() {
@@ -432,6 +453,11 @@ _trk__subcmd__time_commands() {
 _trk__subcmd__undo_commands() {
     local commands; commands=()
     _describe -t commands 'trk undo commands' commands "$@"
+}
+(( $+functions[_trk__subcmd__view_commands] )) ||
+_trk__subcmd__view_commands() {
+    local commands; commands=()
+    _describe -t commands 'trk view commands' commands "$@"
 }
 
 if [ "$funcstack[1]" = "_trk" ]; then

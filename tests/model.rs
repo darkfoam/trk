@@ -118,6 +118,17 @@ goal g1 open 2026-10-07T09:00:00-05:00 G
     assert!(task.running.is_some());
 }
 
+#[test]
+fn kitchen_sink_example_is_canonical() {
+    let text = include_str!("../examples/kitchen-sink.trk");
+    let doc = parse(text).expect("the kitchen-sink example parses");
+    assert_eq!(
+        serialize(&doc),
+        text,
+        "serialize(parse(x)) == x for the example"
+    );
+}
+
 fn ts(s: &str) -> DateTime<FixedOffset> {
     DateTime::parse_from_rfc3339(s).unwrap()
 }

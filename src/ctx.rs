@@ -41,7 +41,12 @@ impl Ctx {
     }
 
     pub fn style(&self) -> Style {
-        Style::with_current(self.color, self.ascii, self.config.current_color)
+        Style::with_colors(
+            self.color,
+            self.ascii,
+            self.config.current_color,
+            self.config.agenda_color,
+        )
     }
 
     /// A prompt is only shown when both stdin and stderr are terminals

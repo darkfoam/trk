@@ -54,3 +54,9 @@
 - On release, move the `Unreleased` entries under a new `## [x.y.z] - YYYY-MM-DD`
   heading and add the compare link. Releases publish that section as the
   release body.
+
+## Versioning
+- Standard [semver](https://semver.org/). While pre-1.0 the version is `0.y.z`:
+  initial development, where anything may change and the public interface is not
+  stable. Breaking changes and features both move `y`; bug fixes move `z`.
+- At `1.0.0` it becomes the usual `MAJOR.MINOR.PATCH`.
