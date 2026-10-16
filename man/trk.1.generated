@@ -1,6 +1,6 @@
 .ie \n(.g .ds Aq \(aq
 .el .ds Aq '
-.TH trk 1  "trk 0.5.0" 
+.TH trk 1  "trk 0.6.0" 
 .SH NAME
 trk \- adhd compliant task tracking
 .SH SYNOPSIS
@@ -91,4 +91,4 @@ What got finished, by day
 trk\-completions(1)
 Install shell completions for the detected shell
 .SH VERSION
-v0.5.0
+v0.6.0

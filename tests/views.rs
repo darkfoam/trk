@@ -69,13 +69,14 @@ fn log_shows_finished_task_with_time() {
         &doc,
         &[today],
         dt("2026-10-07T12:00:00-05:00"),
+        "MM/DD/YYYY",
         80,
         Style::new(false, true),
     ));
     assert!(got.contains("Call internet company"), "{got}");
     assert!(got.contains("11:00"), "{got}");
     assert!(got.contains("10m"), "{got}");
-    assert!(got.contains("Wed 2026-10-07"), "{got}");
+    assert!(got.contains("Wed 10/07/2026"), "{got}");
 }
 
 #[test]
@@ -87,26 +88,64 @@ fn unicode_symbols_used_by_default() {
 }
 
 #[test]
-fn agenda_groups_by_date() {
+fn agenda_shows_only_this_week_grouped_by_date() {
     let text = "\
 trk 1
-next g=1 t=3 i=1
+next g=1 t=4 i=1
 active g1
 
 goal g1 open 2026-10-06T09:00:00-05:00 G
   [ ] t1 2026-10-07T09:00:00-05:00 due today
     @ at=2026-10-07
-  [ ] t2 2026-10-07T09:00:00-05:00 due later
+  [ ] t2 2026-10-07T09:00:00-05:00 due later this week
     @ at=2026-10-09
+  [ ] t3 2026-10-07T09:00:00-05:00 due next week
+    @ at=2026-10-20
 ";
     let doc = parse(text).unwrap();
     let today = chrono::NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
-    let got = render(views::agenda_view(&doc, today, 80, Style::new(false, true)));
-    assert!(got.contains("Today"), "{got}");
-    assert!(got.contains("2026-10-07"), "{got}");
+    let got = render(views::agenda_view(
+        &doc,
+        today,
+        chrono::Weekday::Mon,
+        "MM/DD/YYYY",
+        80,
+        Style::new(false, true),
+    ));
+    assert!(got.contains("Today  10/07/2026"), "{got}");
     assert!(got.contains("due today"), "{got}");
-    assert!(got.contains("2026-10-09"), "{got}");
-    assert!(got.contains("due later"), "{got}");
+    assert!(got.contains("due later this week"), "{got}");
+    assert!(got.contains("10/09/2026"), "{got}");
+    assert!(!got.contains("due next week"), "outside the week: {got}");
+    assert!(!got.contains("10/20/2026"), "outside the week: {got}");
+}
+
+#[test]
+fn agenda_marks_today_in_the_agenda_color() {
+    let text = "\
+trk 1
+next g=1 t=2 i=1
+active g1
+
+goal g1 open 2026-10-06T09:00:00-05:00 G
+  [ ] t1 2026-10-07T09:00:00-05:00 due today
+    @ at=2026-10-07
+";
+    let doc = parse(text).unwrap();
+    let today = chrono::NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
+    let lines = views::agenda_view(
+        &doc,
+        today,
+        chrono::Weekday::Mon,
+        "MM/DD/YYYY",
+        80,
+        Style::new(true, true),
+    );
+    let rendered = trk::ui::style::render_lines(&lines, Style::new(true, true));
+    assert!(
+        rendered.contains("\u{1b}[33m"),
+        "today should be yellow: {rendered:?}"
+    );
 }
 
 #[test]

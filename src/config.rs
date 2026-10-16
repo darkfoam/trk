@@ -51,6 +51,10 @@ pub struct Config {
     pub current_color: ColorName,
     /// Color for tasks assigned today in the agenda (default yellow).
     pub agenda_color: ColorName,
+    /// Display format for dates (moment/Obsidian-style tokens).
+    pub date_format: String,
+    /// First day of the week, canonical `Mon`..`Sun`.
+    pub week_start: String,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -237,6 +241,43 @@ impl Config {
             None => ColorName::Yellow,
         };
 
+        let date_format = match table.get("date_format") {
+            Some(toml::Value::String(s)) if !s.trim().is_empty() => s.clone(),
+            Some(toml::Value::String(_)) => {
+                return Err(ConfigError::Invalid {
+                    path: path.to_path_buf(),
+                    message: "date_format: expected a non-empty string".into(),
+                });
+            }
+            Some(_) => {
+                return Err(ConfigError::Invalid {
+                    path: path.to_path_buf(),
+                    message: "date_format: expected a string".into(),
+                });
+            }
+            None => "MM/DD/YYYY".to_string(),
+        };
+
+        let week_start = match table.get("week_start") {
+            Some(toml::Value::String(s)) => {
+                let day =
+                    crate::ui::datefmt::parse_weekday(s).ok_or_else(|| ConfigError::Invalid {
+                        path: path.to_path_buf(),
+                        message: format!(
+                            "week_start: expected a weekday (Mon, Tue, ... Sun), got \"{s}\""
+                        ),
+                    })?;
+                crate::ui::datefmt::weekday_abbrev(day).to_string()
+            }
+            Some(_) => {
+                return Err(ConfigError::Invalid {
+                    path: path.to_path_buf(),
+                    message: "week_start: expected a string".into(),
+                });
+            }
+            None => "Mon".to_string(),
+        };
+
         let wrap = match table.get("wrap") {
             Some(toml::Value::Integer(n)) => (*n).clamp(40, 200) as usize,
             Some(_) => {
@@ -283,6 +324,8 @@ impl Config {
             ascii,
             current_color,
             agenda_color,
+            date_format,
+            week_start,
         };
         Ok((config, warnings))
     }
@@ -305,6 +348,8 @@ impl Config {
             ascii: Toggle::Auto,
             current_color: ColorName::default(),
             agenda_color: ColorName::Yellow,
+            date_format: "MM/DD/YYYY".to_string(),
+            week_start: "Mon".to_string(),
         })
     }
 
@@ -332,7 +377,9 @@ impl Config {
              prompt_why = {why}\n\
              ascii = \"{ascii}\"\n\
              current_color = \"{current_color}\"\n\
-             agenda_color = \"{agenda_color}\"\n",
+             agenda_color = \"{agenda_color}\"\n\
+             date_format = \"{date_format}\"\n\
+             week_start = \"{week_start}\"\n",
             store = self.store_raw,
             backups = self.backups_raw,
             color = self.color.as_str(),
@@ -342,6 +389,8 @@ impl Config {
             ascii = self.ascii.as_str(),
             current_color = self.current_color.as_str(),
             agenda_color = self.agenda_color.as_str(),
+            date_format = self.date_format,
+            week_start = self.week_start,
         )
     }
 }
@@ -356,6 +405,8 @@ const KNOWN_KEYS: &[&str] = &[
     "ascii",
     "current_color",
     "agenda_color",
+    "date_format",
+    "week_start",
     // Accepted from older versions, no longer used.
     "poll_ms",
 ];

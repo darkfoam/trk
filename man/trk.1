@@ -1,4 +1,4 @@
-.TH TRK 1 "2026-10-15" "trk 0.5.0" "User Commands"
+.TH TRK 1 "2026-10-15" "trk 0.6.0" "User Commands"
 .SH NAME
 trk \- adhd compliant task tracking
 .SH SYNOPSIS
@@ -268,13 +268,14 @@ or a
 date.
 .TP
 .BR "trk agenda"
-Print unfinished tasks grouped by the date they were assigned, org\-agenda style:
-overdue dates first, then each day in order, with times when a task carries one.
-Tasks assigned to
+Print the current week's unfinished tasks, day by day, org\-agenda style,
+starting on
+.B week_start
+(Mon by default). Tasks assigned to
 .I today
 are emphasized in
-.B agenda_color
-(yellow by default). Assign dates with
+.BR agenda_color .
+Dated tasks outside the current week are not shown. Assign dates with
 .BR "trk view" .
 .SS "Setup"
 .TP
@@ -392,10 +393,36 @@ prompt_why    = true        # ask "why?" when adding a task
 ascii         = "auto"      # auto | always | never
 current_color = "green"     # color of the current task
 agenda_color  = "yellow"    # color of tasks assigned today in the agenda
+date_format   = "MM/DD/YYYY"  # display format for dates
+week_start    = "Mon"       # first day of the agenda week (Mon..Sun)
 .RE
 .fi
 .PP
 Unknown keys are ignored with a warning.
+.PP
+.B date_format
+is a display format for dates. It accepts the tokens
+.BR YYYY ,
+.BR YY ,
+.BR MM ,
+.BR DD ,
+.BR M ,
+.BR D ,
+.B ddd
+(abbreviated weekday) and
+.BR dddd
+(full weekday), and copies anything else literally; it defaults to
+.BR MM/DD/YYYY .
+Use, for example,
+.BR "ddd MM/DD/YYYY"
+to include the weekday. The agenda's
+.I today
+row is always labelled
+.BR Today .
+.B week_start
+names the first day of the agenda week by the first three letters of the day
+(case\-insensitive) and defaults to
+.BR Mon .
 .SH ENVIRONMENT
 .TP
 .B TRK_CONFIG

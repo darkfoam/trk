@@ -1,3 +1,4 @@
+pub mod datefmt;
 pub mod style;
 pub mod views;
 pub mod wrap;

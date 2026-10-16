@@ -8,6 +8,20 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `date_format` config, a moment/Obsidian-style date format for display
+  (tokens `YYYY`, `YY`, `MM`, `DD`, `M`, `D`, `ddd`, `dddd`; default
+  `MM/DD/YYYY`). Applies to `trk agenda`, `trk view` labels, and `trk log`.
+- `week_start` config: the first day of the agenda week, by the first three
+  letters of the day and case-insensitive (default `Mon`).
+
+### Changed
+
+- `trk agenda` now prints only the current week, day by day from `week_start`,
+  instead of every dated task. Tasks assigned to today remain highlighted in
+  `agenda_color`.
+
 ## [0.5.0] - 2026-10-15
 
 ### Changed

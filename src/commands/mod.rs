@@ -167,6 +167,8 @@ fn run_config_flow() -> Result<Config, TrkError> {
         ascii: Toggle::Auto,
         current_color: crate::ui::style::ColorName::default(),
         agenda_color: crate::ui::style::ColorName::Yellow,
+        date_format: "MM/DD/YYYY".to_string(),
+        week_start: "Mon".to_string(),
     };
 
     if !config.store.exists() {
@@ -536,8 +538,14 @@ fn view_command(ctx: &Ctx, ui: &mut dyn Ui) -> Result<i32, TrkError> {
             let mut label = format!("{:>2}  {}{}", n, "  ".repeat(depth), task.text);
             if let Some(at) = &task.at {
                 let when = match at {
-                    Schedule::Date(d) => d.format("%Y-%m-%d").to_string(),
-                    Schedule::DateTime(ts) => ts.format("%Y-%m-%d %H:%M").to_string(),
+                    Schedule::Date(d) => {
+                        crate::ui::datefmt::format_date(*d, &ctx.config.date_format)
+                    }
+                    Schedule::DateTime(ts) => format!(
+                        "{} {}",
+                        crate::ui::datefmt::format_date(ts.date_naive(), &ctx.config.date_format),
+                        ts.format("%H:%M")
+                    ),
                 };
                 label.push_str(&format!("  ({when})"));
             }
@@ -631,7 +639,19 @@ fn agenda_command(ctx: &Ctx) -> Result<i32, TrkError> {
     let store = active_store(ctx);
     let doc = store.read()?;
     let today = ctx.clock.now().date_naive();
-    print_lines(ctx, &views::agenda_view(&doc, today, ctx.wrap, ctx.style()));
+    let week_start =
+        crate::ui::datefmt::parse_weekday(&ctx.config.week_start).unwrap_or(chrono::Weekday::Mon);
+    print_lines(
+        ctx,
+        &views::agenda_view(
+            &doc,
+            today,
+            week_start,
+            &ctx.config.date_format,
+            ctx.wrap,
+            ctx.style(),
+        ),
+    );
     Ok(0)
 }
 
@@ -796,7 +816,14 @@ fn log_command(ctx: &Ctx, args: LogArgs) -> Result<i32, TrkError> {
     let days = parse_log_when(&join_text(&args.when), today)?;
     print_lines(
         ctx,
-        &views::log_view(&doc, &days, ctx.clock.now(), ctx.wrap, ctx.style()),
+        &views::log_view(
+            &doc,
+            &days,
+            ctx.clock.now(),
+            &ctx.config.date_format,
+            ctx.wrap,
+            ctx.style(),
+        ),
     );
     Ok(0)
 }

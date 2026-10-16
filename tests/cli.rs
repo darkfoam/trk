@@ -210,7 +210,42 @@ fn view_shows_assigned_dates_in_labels() {
         .args(["view"])
         .assert()
         .success()
-        .stderr(predicate::str::contains("2026-10-09"));
+        .stderr(predicate::str::contains("10/09/2026"));
+}
+
+#[test]
+fn config_date_format_and_week_start_apply() {
+    let env = Env::new();
+    let config = format!(
+        "store = {:?}\nbackups = {:?}\ndate_format = \"DD.MM.YYYY\"\nweek_start = \"Sun\"\n",
+        env.store().to_string_lossy(),
+        env.dir.path().join("backups").to_string_lossy()
+    );
+    fs::write(env.dir.path().join("config.toml"), config).unwrap();
+    env.run(&["new", "goal", "G"]).success();
+    env.run(&["add", "task"]).success();
+    env.cmd()
+        .write_stdin("a 1\ntoday\n\n")
+        .args(["view"])
+        .assert()
+        .success();
+    env.run(&["agenda"])
+        .success()
+        .stdout(predicate::str::contains("07.10.2026"));
+}
+
+#[test]
+fn invalid_week_start_is_a_config_error() {
+    let env = Env::new();
+    let config = format!(
+        "store = {:?}\nbackups = {:?}\nweek_start = \"Funday\"\n",
+        env.store().to_string_lossy(),
+        env.dir.path().join("backups").to_string_lossy()
+    );
+    fs::write(env.dir.path().join("config.toml"), config).unwrap();
+    env.run(&["list"])
+        .failure()
+        .stderr(predicate::str::contains("week_start"));
 }
 
 #[test]

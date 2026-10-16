@@ -123,9 +123,12 @@ has open sub-tasks: `trk done` refuses and exits 3 until you pass `--force`.
 stops the timer, and totals show up in `trk progress goal` and `trk log`.
 
 `trk view` opens the whole task list in the picker; press `a` on a task to
-assign it a date (no time) and the picker reopens. `trk agenda` then prints
-those tasks grouped by day, org-agenda style, emphasising anything assigned to
-today in a configurable color (yellow by default via `agenda_color`).
+assign it a date (no time) and the picker reopens. `trk agenda` then prints the
+current week's dated tasks, day by day, org-agenda style, emphasising anything
+assigned to today in a configurable color (yellow by default via `agenda_color`).
+The week starts on `week_start` (`Mon` by default) and dates are shown with
+`date_format` (`MM/DD/YYYY` by default; tokens `YYYY`, `YY`, `MM`, `DD`, `M`,
+`D`, `ddd`, `dddd`, e.g. `ddd MM/DD/YYYY` for the weekday).
 
 For the complete walkthrough, see the man page (`man trk`) or
 `trk <command> --help`.
@@ -155,7 +158,7 @@ For the complete walkthrough, see the man page (`man trk`) or
 | `trk jot <text>` | capture a task in the inbox |
 | `trk inbox` | file inbox items with the picker (TAB creates a goal) |
 | `trk log [when]` | what got finished, by day, with time spent |
-| `trk agenda` | dated tasks by day, today highlighted |
+| `trk agenda` | this week's dated tasks, today highlighted |
 | `trk completions [shell]` | install shell completions for your shell |
 
 Aliases: `d` done, `l` list, `u` undo, `i` jot.
@@ -179,6 +182,8 @@ prompt_why = true        # ask "why?" when adding a task
 ascii = "auto"           # auto | always | never
 current_color = "green"  # color of the current task
 agenda_color = "yellow"  # color of tasks assigned today in the agenda
+date_format = "MM/DD/YYYY"  # display format for dates
+week_start = "Mon"       # first day of the agenda week (Mon..Sun)
 ```
 
 Environment variables:

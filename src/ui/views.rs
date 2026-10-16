@@ -1,5 +1,6 @@
-use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDate, NaiveTime};
+use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDate, NaiveTime, Weekday};
 
+use super::datefmt;
 use super::style::{Role, Style, StyledLine};
 use super::wrap;
 use crate::model::ops::format_duration;
@@ -238,6 +239,7 @@ pub fn log_view(
     doc: &Doc,
     days: &[NaiveDate],
     now: DateTime<FixedOffset>,
+    date_format: &str,
     width: usize,
     style: Style,
 ) -> Vec<StyledLine> {
@@ -268,8 +270,8 @@ pub fn log_view(
         let total: i64 = done.iter().map(|(_, _, t)| task_seconds(t, now)).sum();
         let mut header = format!(
             "{} {}   {} done, {} added",
-            weekday_abbrev(date.weekday()),
-            date.format("%Y-%m-%d"),
+            datefmt::weekday_abbrev(date.weekday()),
+            datefmt::format_date(*date, date_format),
             done.len(),
             added
         );
@@ -309,25 +311,21 @@ pub fn log_view(
     out
 }
 
-fn weekday_abbrev(day: chrono::Weekday) -> &'static str {
-    match day {
-        chrono::Weekday::Mon => "Mon",
-        chrono::Weekday::Tue => "Tue",
-        chrono::Weekday::Wed => "Wed",
-        chrono::Weekday::Thu => "Thu",
-        chrono::Weekday::Fri => "Fri",
-        chrono::Weekday::Sat => "Sat",
-        chrono::Weekday::Sun => "Sun",
-    }
-}
-
 pub fn days_back(today: NaiveDate, n: usize) -> Vec<NaiveDate> {
     (0..n).map(|i| today - Duration::days(i as i64)).collect()
 }
 
-/// `trk agenda`: tasks grouped by the date they are assigned, org-agenda
-/// style. Tasks assigned to today are emphasised in the agenda color.
-pub fn agenda_view(doc: &Doc, today: NaiveDate, width: usize, style: Style) -> Vec<StyledLine> {
+/// `trk agenda`: unfinished tasks assigned within the current week (starting on
+/// `week_start`), org-agenda style. Tasks assigned to today are emphasised in
+/// the agenda color; dates are shown with `date_format`.
+pub fn agenda_view(
+    doc: &Doc,
+    today: NaiveDate,
+    week_start: Weekday,
+    date_format: &str,
+    width: usize,
+    style: Style,
+) -> Vec<StyledLine> {
     let _ = style;
     struct Entry {
         date: NaiveDate,
@@ -355,41 +353,40 @@ pub fn agenda_view(doc: &Doc, today: NaiveDate, width: usize, style: Style) -> V
             });
         }
     }
-    if entries.is_empty() {
-        return vec![plain("nothing scheduled")];
-    }
     entries.sort_by_key(|e| (e.date, e.time));
 
-    let mut out = Vec::new();
-    let overdue: Vec<&Entry> = entries.iter().filter(|e| e.date < today).collect();
-    if !overdue.is_empty() {
-        out.push(styled("Overdue", Role::Title));
-        for e in overdue {
-            push_agenda_line(&mut out, e.time, &e.text, &e.goal, width, Role::Normal);
-        }
+    // The week containing `today`, starting on `week_start`.
+    let since =
+        (today.weekday().num_days_from_monday() + 7 - week_start.num_days_from_monday()) % 7;
+    let start = today - Duration::days(since as i64);
+    let end = start + Duration::days(6);
+
+    let in_week: Vec<&Entry> = entries
+        .iter()
+        .filter(|e| e.date >= start && e.date <= end)
+        .collect();
+    if in_week.is_empty() {
+        return vec![plain("nothing scheduled this week")];
     }
 
-    let mut dates: Vec<NaiveDate> = entries
-        .iter()
-        .map(|e| e.date)
-        .filter(|d| *d >= today)
-        .collect();
-    dates.sort_unstable();
-    dates.dedup();
-    for date in dates {
+    let mut out = Vec::new();
+    let mut date = start;
+    while date <= end {
         let is_today = date == today;
-        if is_today {
-            out.push(styled(
-                format!("Today  {}", date.format("%a %Y-%m-%d")),
-                Role::Today,
-            ));
+        let label = if is_today {
+            format!("Today  {}", datefmt::format_date(date, date_format))
         } else {
-            out.push(styled(date.format("%a %Y-%m-%d").to_string(), Role::Title));
-        }
+            datefmt::format_date(date, date_format)
+        };
+        out.push(styled(
+            label,
+            if is_today { Role::Today } else { Role::Title },
+        ));
         let role = if is_today { Role::Today } else { Role::Normal };
-        for e in entries.iter().filter(|e| e.date == date) {
+        for e in in_week.iter().filter(|e| e.date == date) {
             push_agenda_line(&mut out, e.time, &e.text, &e.goal, width, role);
         }
+        date += Duration::days(1);
     }
     out
 }
