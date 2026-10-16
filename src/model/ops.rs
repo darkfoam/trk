@@ -415,6 +415,32 @@ fn op_before(
     Ok(Outcome::status())
 }
 
+/// The next unfinished sibling of `id` at its own level, if any.
+fn next_unfinished_sibling(goal: &Goal, id: TaskId) -> Option<TaskId> {
+    let path = tree::find_path(goal, id)?;
+    let (&last, parent_path) = path.split_last()?;
+    let siblings: &[Task] = if parent_path.is_empty() {
+        &goal.roots
+    } else {
+        &tree::task_at(goal, parent_path)?.children
+    };
+    siblings[last + 1..]
+        .iter()
+        .find(|t| t.state.is_unfinished())
+        .map(|t| t.id)
+}
+
+/// The first unfinished entry in `task`'s subtree, drilling down to the most
+/// nested level first.
+fn descend_first_open(task: &Task) -> TaskId {
+    for child in &task.children {
+        if child.state.is_unfinished() {
+            return descend_first_open(child);
+        }
+    }
+    task.id
+}
+
 fn op_done(doc: &mut Doc, force: bool, now: DateTime<FixedOffset>) -> Result<Outcome, OpError> {
     let goal_id = doc.active.ok_or(OpError::NoActiveGoal)?;
     let current = {
@@ -446,42 +472,24 @@ fn op_done(doc: &mut Doc, force: bool, now: DateTime<FixedOffset>) -> Result<Out
     let mut messages = Vec::new();
     let next = if force && has_open {
         goal.find(current).and_then(Task::first_open_leaf)
+    } else if let Some(sibling) = next_unfinished_sibling(goal, current) {
+        let id = goal
+            .find(sibling)
+            .map(descend_first_open)
+            .unwrap_or(sibling);
+        messages.push(Message::normal(format!(
+            "next: {}",
+            find_task_text(goal, id)
+        )));
+        Some(id)
+    } else if let Some(parent) = tree::parent_of(goal, current).flatten() {
+        messages.push(Message::normal(format!(
+            "back to: {}",
+            find_task_text(goal, parent)
+        )));
+        Some(parent)
     } else {
-        match tree::nearest_open_ancestor(goal, current) {
-            Some(parent) => {
-                let parent_has_open = goal
-                    .find(parent)
-                    .map(|p| p.has_open_descendant())
-                    .unwrap_or(false);
-                if parent_has_open {
-                    let leaf = goal.find(parent).and_then(Task::first_open_leaf);
-                    if let Some(leaf) = leaf {
-                        messages.push(Message::normal(format!(
-                            "next: {}  (still needed for: {})",
-                            find_task_text(goal, leaf),
-                            find_task_text(goal, parent)
-                        )));
-                    }
-                    leaf
-                } else {
-                    messages.push(Message::normal(format!(
-                        "back to: {}",
-                        find_task_text(goal, parent)
-                    )));
-                    Some(parent)
-                }
-            }
-            None => match tree::next_open_root_after(goal, current) {
-                Some(root) => {
-                    messages.push(Message::normal(format!(
-                        "next top-level task: {}",
-                        find_task_text(goal, root)
-                    )));
-                    Some(root)
-                }
-                None => None,
-            },
-        }
+        None
     };
 
     match next {
@@ -958,6 +966,52 @@ goal g1 open 2026-10-07T09:00:00-05:00 G
         assert!(goal.find(1).is_none());
         assert_eq!(goal.roots.len(), 0);
         assert!(goal.cursor.is_none());
+    }
+
+    #[test]
+    fn done_walks_siblings_then_parents_drilling_in() {
+        let mut d = parse(
+            "\
+trk 1
+next g=1 t=10 i=1
+active g1
+
+goal g1 open 2026-10-07T09:00:00-05:00 G
+  current t1
+  [ ] t1 2026-10-07T09:00:00-05:00 A
+  [ ] t2 2026-10-07T09:00:00-05:00 B
+  [ ] t3 2026-10-07T09:00:00-05:00 C
+    [ ] t4 2026-10-07T09:00:00-05:00 C1
+    [ ] t5 2026-10-07T09:00:00-05:00 C2
+      [ ] t6 2026-10-07T09:00:00-05:00 C2a
+      [ ] t7 2026-10-07T09:00:00-05:00 C2b
+    [ ] t8 2026-10-07T09:00:00-05:00 C3
+  [ ] t9 2026-10-07T09:00:00-05:00 D
+",
+        )
+        .unwrap();
+
+        let mut seen = Vec::new();
+        for _ in 0..20 {
+            let (next, _) = apply(
+                &d,
+                &Request::Done { force: false },
+                ts("2026-10-07T10:00:00-05:00"),
+            )
+            .unwrap();
+            d = next;
+            let goal = d.active_goal().unwrap();
+            match goal.cursor {
+                Some(id) => seen.push(goal.find(id).unwrap().text.clone()),
+                None => break,
+            }
+        }
+        assert_eq!(
+            seen,
+            vec!["B", "C1", "C2a", "C2b", "C2", "C3", "C", "D"],
+            "next sibling (drilling in), else parent"
+        );
+        assert_eq!(d.active_goal().unwrap().cursor, None, "work is exhausted");
     }
 
     #[test]

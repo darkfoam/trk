@@ -119,6 +119,12 @@ with a pointer at the current task. `trk progress goal` shows the entire tree,
 with completed tasks struck through. A parent cannot be completed while it still
 has open sub-tasks: `trk done` refuses and exits 3 until you pass `--force`.
 
+When you complete a task the cursor moves to the next unfinished sibling —
+descending into its first task if it has sub-tasks — or to the parent when there
+is no next sibling. Repeated `trk done` thus digs down a level and then unwinds
+naturally back up to the goal, which also lets you order sibling tasks by
+completing them top to bottom.
+
 `trk time` records time against the current task; `trk stop` (or `trk done`)
 stops the timer, and totals show up in `trk progress goal` and `trk log`.
 

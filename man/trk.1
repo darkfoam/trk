@@ -200,6 +200,11 @@ Complete the current task and stop its timer. A task with open sub-tasks cannot
 be completed until they are done; pass
 .B \-\-force
 to override, which exits 3 otherwise.
+The cursor then moves to the next unfinished sibling, descending into that
+sibling's first task when it has sub-tasks; when there is no next sibling it
+moves to the parent. Repeated
+.B done
+therefore works down a level and then unwinds back up to the goal.
 .TP
 .BR "trk time"
 Start a timer on the current task. If one is already running, the elapsed time

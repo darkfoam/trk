@@ -18,6 +18,11 @@ and this project adheres to
 
 ### Changed
 
+- `trk done` now advances the cursor to the next unfinished sibling — descending
+  into that sibling's first task when it has sub-tasks — or to the parent when
+  there is no next sibling, instead of the previous ancestor/leaf search.
+  Repeated `done` digs down a level and then unwinds back up to the goal, and
+  lets you order sibling tasks by completing them top to bottom.
 - `trk agenda` now prints only the current week, day by day from `week_start`,
   instead of every dated task. Tasks assigned to today remain highlighted in
   `agenda_color`.
